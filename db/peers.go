@@ -1,6 +1,11 @@
 package db
 
-import "github.com/lampy255/net-tbm/types"
+import (
+	"errors"
+	"log"
+
+	"github.com/lampy255/net-tbm/types"
+)
 
 func GetPeers() ([]types.Peer, error) {
 	// Query the database
@@ -50,13 +55,100 @@ func GetPeers() ([]types.Peer, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// Decyrpt the private_key
+		peer.PrivateKey, err = DecryptAES(peer.PrivateKey, AES_KEY)
+		if err != nil {
+			return nil, err
+		}
+
+		// Decrypt the pre_shared_key
+		peer.PreSharedKey, err = DecryptAES(peer.PreSharedKey, AES_KEY)
+		if err != nil {
+			return nil, err
+		}
+
 		peers = append(peers, peer)
 	}
 
 	return peers, nil
 }
 
-func InsertPeer(peer types.Peer) error {
+func GetPeer(uuid string) (types.Peer, error) {
+	// Query the database
+	query := `SELECT
+		uuid,
+		hostname,
+		enabled,
+		peer_type,
+		updated_millis,
+		private_key,
+		public_key,
+		pre_shared_key,
+		keep_alive_millis,
+		local_tun_address,
+		remote_tun_address,
+		remote_subnets,
+		allowed_subnets,
+		last_seen_millis,
+		last_ip_address
+		FROM peers
+		WHERE uuid = @p1`
+	row := DB.QueryRow(query, uuid)
+
+	// Scan the row
+	var peer types.Peer
+	err := row.Scan(
+		&peer.UUID,
+		&peer.Hostname,
+		&peer.Enabled,
+		&peer.PeerType,
+		&peer.UpdatedMillis,
+		&peer.PrivateKey,
+		&peer.PublicKey,
+		&peer.PreSharedKey,
+		&peer.KeepAliveMillis,
+		&peer.LocalTunAddress,
+		&peer.RemoteTunAddress,
+		&peer.RemoteSubnets,
+		&peer.AllowedSubnets,
+		&peer.LastSeenMillis,
+		&peer.LastIPAddress,
+	)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	// Decyrpt the private_key
+	peer.PrivateKey, err = DecryptAES(peer.PrivateKey, AES_KEY)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	// Decrypt the pre_shared_key
+	peer.PreSharedKey, err = DecryptAES(peer.PreSharedKey, AES_KEY)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	return peer, nil
+}
+
+func InsertPeer(peer types.Peer) (err error) {
+	// Encrypt the private_key
+	peer.PrivateKey, err = EncryptAES(peer.PrivateKey, AES_KEY)
+	if err != nil {
+		log.Println(err)
+		return errors.New("encryption error")
+	}
+
+	// Encrypt the pre_shared_key
+	peer.PreSharedKey, err = EncryptAES(peer.PreSharedKey, AES_KEY)
+	if err != nil {
+		log.Println(err)
+		return errors.New("encryption error")
+	}
+
 	// Insert the peer into the database
 	query := `INSERT INTO peers (
 		uuid,
@@ -75,7 +167,7 @@ func InsertPeer(peer types.Peer) error {
 		last_seen_millis,
 		last_ip_address) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15)`
 
-	_, err := DB.Exec(query,
+	_, err = DB.Exec(query,
 		peer.UUID,
 		peer.Hostname,
 		peer.Enabled,
@@ -94,7 +186,21 @@ func InsertPeer(peer types.Peer) error {
 	return err
 }
 
-func UpdatePeer(peer types.Peer) error {
+func UpdatePeer(peer types.Peer) (err error) {
+	// Encrypt the private_key
+	peer.PrivateKey, err = EncryptAES(peer.PrivateKey, AES_KEY)
+	if err != nil {
+		log.Println(err)
+		return errors.New("encryption error")
+	}
+
+	// Encrypt the pre_shared_key
+	peer.PreSharedKey, err = EncryptAES(peer.PreSharedKey, AES_KEY)
+	if err != nil {
+		log.Println(err)
+		return errors.New("encryption error")
+	}
+
 	// Update the peer in the database
 	query := `UPDATE peers SET
 		hostname=@p2,
@@ -113,7 +219,7 @@ func UpdatePeer(peer types.Peer) error {
 		last_ip_address=@p15
 		WHERE uuid=@p1`
 
-	_, err := DB.Exec(query,
+	_, err = DB.Exec(query,
 		peer.UUID,
 		peer.Hostname,
 		peer.Enabled,
@@ -136,4 +242,14 @@ func DeletePeer(uuid string) error {
 	// Delete the peer from the database
 	_, err := DB.Exec("DELETE FROM peers WHERE uuid = @p1", uuid)
 	return err
+}
+
+func GetPeerSessionToken(uuid string) (hash string, err error) {
+	// Query the database
+	query := `SELECT session_token_hash FROM peers WHERE uuid = @p1`
+	row := DB.QueryRow(query, uuid)
+
+	// Scan the row
+	err = row.Scan(&hash)
+	return
 }

@@ -10,8 +10,12 @@ import (
 )
 
 var DB *sql.DB
+var AES_KEY []byte
 
-func InitDB() {
+func InitDB(EncryptionKey []byte) {
+	// Store AES key
+	AES_KEY = EncryptionKey
+
 	// Does the data directory exist?
 	_, err := os.Stat("data")
 	if err != nil {
@@ -33,7 +37,7 @@ func InitDB() {
 	// Create the peers table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS peers (
 		uuid TEXT PRIMARY KEY,
-		hostname TEXT,
+		hostname TEXT UNIQUE,
 		enabled BOOLEAN,
 		peer_type TEXT,
 		updated_millis INTEGER,
@@ -47,6 +51,7 @@ func InitDB() {
 		allowed_subnets TEXT,
 		last_seen_millis INTEGER,
 		last_ip_address TEXT,
+		session_token_hash TEXT,
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -60,6 +65,8 @@ func InitDB() {
 		suspended BOOLEAN,
 		password_hash TEXT,
 		password_salt TEXT,
+		session_token_hash TEXT,
+		session_expires_millis INTEGER,
 	)`)
 	if err != nil {
 		log.Fatal(err)

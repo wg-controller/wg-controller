@@ -60,20 +60,6 @@ func GetAccount(email string) (types.UserAccount, error) {
 	return account, nil
 }
 
-func GetAccountHashSalt(email string) (hash string, salt string, err error) {
-	// Query the database
-	query := `SELECT
-		password_hash,
-		password_salt
-		FROM user_accounts
-		WHERE email = ?`
-	row := DB.QueryRow(query, email)
-
-	// Scan the row
-	err = row.Scan(&hash, &salt)
-	return
-}
-
 func InsertAccount(account types.UserAccount, passwordHash string, passwordSalt string) error {
 	query := `INSERT INTO user_accounts (
 		email,
@@ -122,5 +108,51 @@ func DeleteAccount(email string) error {
 func DeleteAdminAccounts() error {
 	query := `DELETE FROM user_accounts WHERE role = 'admin'`
 	_, err := DB.Exec(query)
+	return err
+}
+
+func GetAccountPasswordHash(email string) (hash string, salt string, err error) {
+	query := `SELECT
+		password_hash,
+		password_salt
+		FROM user_accounts
+		WHERE email = ?`
+	row := DB.QueryRow(query, email)
+
+	// Scan the row
+	err = row.Scan(&hash, &salt)
+	return
+}
+
+func UpdateAccountPasswordHash(email string, hash string, salt string) error {
+	query := `UPDATE user_accounts SET
+		password_hash = ?,
+		password_salt = ?
+		WHERE email = ?`
+
+	_, err := DB.Exec(query, hash, salt, email)
+	return err
+}
+
+func GetAccountSessionHash(email string) (hash string, expires int64, err error) {
+	query := `SELECT
+		session_token_hash,
+		session_expires_millis
+		FROM user_accounts
+		WHERE email = ?`
+	row := DB.QueryRow(query, email)
+
+	// Scan the row
+	err = row.Scan(&hash, &expires)
+	return
+}
+
+func UpdateAccountSessionHash(email string, hash string, expires int64) error {
+	query := `UPDATE user_accounts SET
+		session_token_hash = ?,
+		session_expires_millis = ?
+		WHERE email = ?`
+
+	_, err := DB.Exec(query, hash, expires, email)
 	return err
 }
