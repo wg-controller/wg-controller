@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+# Files containing sensitive information
+.env
+
+# MacOS
+.DS_Store
