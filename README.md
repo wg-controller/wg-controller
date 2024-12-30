@@ -1,2 +1,3 @@
 # net-tbm
- A wireguard server with web based management interface written in Go and VueJS
+## i.e. Net Tunnel Boring Machine
+A wireguard VPN server and control plane with central web management written in Go
