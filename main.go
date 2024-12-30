@@ -28,15 +28,15 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString("PRIVATE_KEY: " + string(privateKey[:]) + "\n")
-			os.Stdout.WriteString("PUBLIC_KEY: " + string(publicKey[:]) + "\n")
+			os.Stdout.WriteString("WG_PRIVATE_KEY: " + string(privateKey[:]) + "\n")
+			os.Stdout.WriteString("WG_PUBLIC_KEY: " + string(publicKey[:]) + "\n")
 			os.Exit(0)
 		case "aes-key":
 			key, err := NewAESKey()
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString("AES_KEY: " + key)
+			os.Stdout.WriteString("DB_AES_KEY: " + key)
 			os.Exit(0)
 		default:
 			fmt.Println("Available commands:")
@@ -53,12 +53,16 @@ func main() {
 	LoadEnvVars()
 
 	// Initialize the database
-	db.InitDB([]byte(ENV.AES_KEY))
+	db.InitDB([]byte(ENV.DB_AES_KEY))
 
 	// Start wireguard-go
 	StartWireguard()
 	defer StopWireguard()
 
+	// Init long polling
+	InitLongPoll()
+
+	// Start the API
 	StartAPI()
 }
 
@@ -81,41 +85,41 @@ func LoadEnvVars() {
 		log.Fatal("ADMIN_PASS env variable is required")
 	}
 
-	ENV.PRIVATE_KEY = os.Getenv("PRIVATE_KEY")
-	if ENV.PRIVATE_KEY == "" {
-		log.Fatal("PRIVATE_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
+	ENV.WG_PRIVATE_KEY = os.Getenv("WG_PRIVATE_KEY")
+	if ENV.WG_PRIVATE_KEY == "" {
+		log.Fatal("WG_PRIVATE_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
 	} else {
 		// Decode Base64
-		_, err := base64.StdEncoding.DecodeString(ENV.PRIVATE_KEY)
+		_, err := base64.StdEncoding.DecodeString(ENV.WG_PRIVATE_KEY)
+		if err != nil {
+			log.Fatal("Invalid WG_PRIVATE_KEY (unable to decode base64)")
+		}
+	}
+
+	ENV.WG_PUBLIC_KEY = os.Getenv("WG_PUBLIC_KEY")
+	if ENV.WG_PUBLIC_KEY == "" {
+		log.Fatal("WG_PUBLIC_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
+	} else {
+		// Decode Base64
+		_, err := base64.StdEncoding.DecodeString(ENV.WG_PRIVATE_KEY)
 		if err != nil {
 			log.Fatal("Invalid PRIVATE_KEY (unable to decode base64)")
 		}
 	}
 
-	ENV.PUBLIC_KEY = os.Getenv("PUBLIC_KEY")
-	if ENV.PUBLIC_KEY == "" {
-		log.Fatal("PUBLIC_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
+	ENV.DB_AES_KEY = os.Getenv("DB_AES_KEY")
+	if ENV.DB_AES_KEY == "" {
+		log.Fatal("DB_AES_KEY env variable is required. Use `net-tbm aes-key` to generate one")
 	} else {
 		// Decode Base64
-		_, err := base64.StdEncoding.DecodeString(ENV.PRIVATE_KEY)
+		bytes, err := base64.StdEncoding.DecodeString(ENV.DB_AES_KEY)
 		if err != nil {
-			log.Fatal("Invalid PRIVATE_KEY (unable to decode base64)")
-		}
-	}
-
-	ENV.AES_KEY = os.Getenv("AES_KEY")
-	if ENV.AES_KEY == "" {
-		log.Fatal("AES_KEY env variable is required. Use `net-tbm aes-key` to generate one")
-	} else {
-		// Decode Base64
-		bytes, err := base64.StdEncoding.DecodeString(ENV.AES_KEY)
-		if err != nil {
-			log.Fatal("Invalid AES_KEY (unable to decode base64)")
+			log.Fatal("Invalid DB_AES_KEY (unable to decode base64)")
 		}
 
 		// Check if key is 32 bytes
 		if len(bytes) != 32 {
-			log.Fatal("Invalid AES_KEY (must be 32 bytes)")
+			log.Fatal("Invalid DB_AES_KEY (must be 32 bytes)")
 		}
 	}
 
