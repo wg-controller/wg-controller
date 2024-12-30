@@ -49,7 +49,7 @@ func GetApiKeys() ([]types.APIKey, error) {
 	return keys, nil
 }
 
-func CreateApiKey(key types.APIKey) error {
+func InsertApiKey(key types.APIKey) error {
 	// Insert the session into the database
 	query := `INSERT INTO api_keys
 		(uuid, hash, expires_unix_millis, name)

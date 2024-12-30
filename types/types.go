@@ -44,6 +44,11 @@ type UserAccount struct {
 	FailedAttempts int    `json:"failedAttempts"`
 }
 
+type UserAccountWithPass struct {
+	UserAccount
+	Password string `json:"password"`
+}
+
 type LoginBody struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

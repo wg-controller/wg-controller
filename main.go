@@ -169,22 +169,17 @@ func InitAdminAccount() {
 		log.Fatal(err)
 	}
 
-	adminAccount := types.UserAccount{
-		Email: ENV.ADMIN_EMAIL,
-		Role:  "admin",
-	}
-
 	salt, err := NewSalt()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	hash, err := HashPassword(ENV.ADMIN_PASS, salt)
+	hash, err := HashString(ENV.ADMIN_PASS, salt)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = db.InsertAccount(adminAccount, hash, salt)
+	err = db.InsertAccount(ENV.ADMIN_EMAIL, "admin", hash, salt)
 	if err != nil {
 		log.Fatal(err)
 	}

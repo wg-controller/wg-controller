@@ -58,7 +58,7 @@ func GetAccount(email string) (types.UserAccount, error) {
 	return account, nil
 }
 
-func InsertAccount(account types.UserAccount, passwordHash string, passwordSalt string) error {
+func InsertAccount(email string, role string, passwordHash string, passwordSalt string) error {
 	query := `INSERT INTO user_accounts (
 		email,
 		role,
@@ -68,9 +68,9 @@ func InsertAccount(account types.UserAccount, passwordHash string, passwordSalt 
 	) VALUES (?, ?, ?, ?, ?, ?)`
 
 	_, err := DB.Exec(query,
-		account.Email,
-		account.Role,
-		account.FailedAttempts,
+		email,
+		role,
+		0,
 		passwordHash,
 		passwordSalt,
 	)

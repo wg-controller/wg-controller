@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os/exec"
 
@@ -68,30 +69,27 @@ func GeneratePeerConfig(peer types.Peer) (wgtypes.PeerConfig, error) {
 	return wgtypes.PeerConfig{}, nil
 }
 
-func GetWireguardPeers(storedPeers []types.Peer) ([]types.PeerExtended, error) {
+func GetWireguardPeer(storedPeer types.Peer) (types.PeerExtended, error) {
 	// Get wireguard data
 	device, err := wg.Device(ENV.INTERFACE_NAME)
 	if err != nil {
-		return nil, err
+		return types.PeerExtended{}, err
 	}
 
-	// Loop through stored peers and match with wireguard peers
-	var ExtendedPeers []types.PeerExtended
-	for _, storedPeer := range storedPeers {
-		for _, peer := range device.Peers {
-			if peer.PresharedKey.String() == storedPeer.PreSharedKey {
-				// Create extended peer and append to list
-				ExtendedPeer := types.PeerExtended{
-					Peer:          storedPeer,
-					TransmitBytes: peer.TransmitBytes,
-					ReceiveBytes:  peer.ReceiveBytes,
-				}
-				ExtendedPeer.LastSeenMillis = peer.LastHandshakeTime.UnixMilli()
-				ExtendedPeer.LastIPAddress = peer.Endpoint.IP.String()
-				ExtendedPeers = append(ExtendedPeers, ExtendedPeer)
+	// Find stored peer in wireguard peers
+	for _, wgPeer := range device.Peers {
+		if wgPeer.PresharedKey.String() == storedPeer.PreSharedKey {
+			// Create extended peer
+			ExtendedPeer := types.PeerExtended{
+				Peer:          storedPeer,
+				TransmitBytes: wgPeer.TransmitBytes,
+				ReceiveBytes:  wgPeer.ReceiveBytes,
 			}
+			ExtendedPeer.LastSeenUnixMillis = wgPeer.LastHandshakeTime.UnixMilli()
+			ExtendedPeer.LastIPAddress = wgPeer.Endpoint.IP.String()
+			return ExtendedPeer, nil
 		}
 	}
 
-	return ExtendedPeers, nil
+	return types.PeerExtended{}, errors.New("peer not found")
 }
