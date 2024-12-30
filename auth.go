@@ -15,28 +15,24 @@ import (
 
 const MaxFailedAttempts = 5
 
-// Hashes a password with a salt
-func HashPassword(password string, salt string) (hash string, err error) {
-	// Check for empty password
-	if password == "" {
-		return "", errors.New("empty password")
+// Hashes an input string with a optional salt
+func HashString(input string, salt string) (hash string, err error) {
+	// Check for empty input
+	if input == "" {
+		return "", errors.New("input string cannot be empty")
 	}
 
 	// Convert to byte slices
-	passwordBytes := []byte(password)
+	inputBytes := []byte(input)
 	saltBytes := []byte(salt)
-	combined := append(passwordBytes, saltBytes...)
 
-	// Hash the password
+	// Combine the input and salt
+	combined := append(inputBytes, saltBytes...)
+
+	// Hash the combined input and salt
 	output, cryptErr := bcrypt.GenerateFromPassword(combined, bcrypt.DefaultCost)
-	if cryptErr != nil {
-		return "", cryptErr
-	}
 
-	// Convert to string
-	hash = string(output)
-
-	return hash, err
+	return string(output), cryptErr
 }
 
 func NewSalt() (salt string, err error) {
@@ -79,7 +75,7 @@ func AuthMiddleware(c *gin.Context) {
 	// If sessionId cookie is present, check the session
 	if session != "" {
 		// Hash the session token
-		hash, err := HashPassword(session, "")
+		hash, err := HashString(session, "")
 		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(500)
@@ -120,7 +116,7 @@ func AuthMiddleware(c *gin.Context) {
 		}
 
 		// Hash the api key
-		hash, err := HashPassword(token, "")
+		hash, err := HashString(token, "")
 		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(500)
@@ -159,7 +155,7 @@ func POST_PreLogin(c *gin.Context) {
 	}
 
 	// Hash the session token
-	hash, err := HashPassword(session, "")
+	hash, err := HashString(session, "")
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -275,7 +271,7 @@ func POST_Login(c *gin.Context) {
 	}
 
 	// Hash the session token
-	hash, err = HashPassword(token, salt)
+	hash, err = HashString(token, salt)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
