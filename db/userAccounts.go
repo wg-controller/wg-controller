@@ -1,6 +1,8 @@
 package db
 
-import "github.com/lampy255/net-tbm/types"
+import (
+	"github.com/lampy255/net-tbm/types"
+)
 
 func GetAccounts() ([]types.UserAccount, error) {
 	// Query the database
@@ -8,7 +10,6 @@ func GetAccounts() ([]types.UserAccount, error) {
 		email,
 		role,
 		failed_attempts,
-		suspended
 		FROM user_accounts`
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -23,7 +24,6 @@ func GetAccounts() ([]types.UserAccount, error) {
 			&account.Email,
 			&account.Role,
 			&account.FailedAttempts,
-			&account.Suspended,
 		)
 		if err != nil {
 			return nil, err
@@ -40,7 +40,6 @@ func GetAccount(email string) (types.UserAccount, error) {
 		email,
 		role,
 		failed_attempts,
-		suspended
 		FROM user_accounts
 		WHERE email = ?`
 	row := DB.QueryRow(query, email)
@@ -51,7 +50,6 @@ func GetAccount(email string) (types.UserAccount, error) {
 		&account.Email,
 		&account.Role,
 		&account.FailedAttempts,
-		&account.Suspended,
 	)
 	if err != nil {
 		return types.UserAccount{}, err
@@ -65,7 +63,6 @@ func InsertAccount(account types.UserAccount, passwordHash string, passwordSalt 
 		email,
 		role,
 		failed_attempts,
-		suspended,
 		password_hash,
 		password_salt
 	) VALUES (?, ?, ?, ?, ?, ?)`
@@ -74,25 +71,8 @@ func InsertAccount(account types.UserAccount, passwordHash string, passwordSalt 
 		account.Email,
 		account.Role,
 		account.FailedAttempts,
-		account.Suspended,
 		passwordHash,
 		passwordSalt,
-	)
-	return err
-}
-
-func UpdateAccount(account types.UserAccount) error {
-	query := `UPDATE user_accounts SET
-		role = ?,
-		failed_attempts = ?,
-		suspended = ?
-		WHERE email = ?`
-
-	_, err := DB.Exec(query,
-		account.Role,
-		account.FailedAttempts,
-		account.Suspended,
-		account.Email,
 	)
 	return err
 }
@@ -134,25 +114,20 @@ func UpdateAccountPasswordHash(email string, hash string, salt string) error {
 	return err
 }
 
-func GetAccountSessionHash(email string) (hash string, expires int64, err error) {
-	query := `SELECT
-		session_token_hash,
-		session_expires_millis
-		FROM user_accounts
+func IncrementAccountFailedAttempts(email string) error {
+	query := `UPDATE user_accounts SET
+		failed_attempts = failed_attempts + 1
 		WHERE email = ?`
-	row := DB.QueryRow(query, email)
 
-	// Scan the row
-	err = row.Scan(&hash, &expires)
-	return
+	_, err := DB.Exec(query, email)
+	return err
 }
 
-func UpdateAccountSessionHash(email string, hash string, expires int64) error {
+func ResetAccountFailedAttempts(email string) error {
 	query := `UPDATE user_accounts SET
-		session_token_hash = ?,
-		session_expires_millis = ?
+		failed_attempts = 0
 		WHERE email = ?`
 
-	_, err := DB.Exec(query, hash, expires, email)
+	_, err := DB.Exec(query, email)
 	return err
 }

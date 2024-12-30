@@ -40,18 +40,17 @@ func InitDB(EncryptionKey []byte) {
 		hostname TEXT UNIQUE,
 		enabled BOOLEAN,
 		peer_type TEXT,
-		updated_millis INTEGER,
+		updated_unixmillis INTEGER,
 		private_key TEXT,
 		public_key TEXT,
 		pre_shared_key TEXT,
-		keep_alive_millis INTEGER,
+		keep_alive_unixmillis INTEGER,
 		local_tun_address TEXT,
 		remote_tun_address TEXT,
 		remote_subnets TEXT,
 		allowed_subnets TEXT,
-		last_seen_millis INTEGER,
+		last_seen_unixmillis INTEGER,
 		last_ip_address TEXT,
-		session_token_hash TEXT,
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -62,16 +61,39 @@ func InitDB(EncryptionKey []byte) {
 		email TEXT PRIMARY KEY,
 		role TEXT,
 		failed_attempts INTEGER,
-		suspended BOOLEAN,
 		password_hash TEXT,
 		password_salt TEXT,
-		session_token_hash TEXT,
-		session_expires_millis INTEGER,
 	)`)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Store DB
+	// Create the sessions table
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+		hash TEXT PRIMARY KEY,
+		expires_unixmillis INTEGER,
+		user_email TEXT,
+		role TEXT,
+	)`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the api_keys table
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS api_keys (
+		uuid TEXT PRIMARY KEY,
+		hash TEXT,
+		expires_unixmillis INTEGER,
+		role TEXT,
+		name TEXT,
+	)`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Update the global DB variable
 	DB = db
+
+	// Init sessions garbage collector
+	go SessionsGarbageCollector()
 }

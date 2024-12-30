@@ -14,7 +14,7 @@ func GetPeers() ([]types.Peer, error) {
 		hostname,
 		enabled,
 		peer_type,
-		updated_millis,
+		updated_unixmillis,
 		private_key,
 		public_key,
 		pre_shared_key,
@@ -23,7 +23,7 @@ func GetPeers() ([]types.Peer, error) {
 		remote_tun_address,
 		remote_subnets,
 		allowed_subnets,
-		last_seen_millis,
+		last_seen_unixmillis,
 		last_ip_address
 		FROM peers`
 	rows, err := DB.Query(query)
@@ -40,7 +40,7 @@ func GetPeers() ([]types.Peer, error) {
 			&peer.Hostname,
 			&peer.Enabled,
 			&peer.PeerType,
-			&peer.UpdatedMillis,
+			&peer.UpdatedUnixMillis,
 			&peer.PrivateKey,
 			&peer.PublicKey,
 			&peer.PreSharedKey,
@@ -49,14 +49,14 @@ func GetPeers() ([]types.Peer, error) {
 			&peer.RemoteTunAddress,
 			&peer.RemoteSubnets,
 			&peer.AllowedSubnets,
-			&peer.LastSeenMillis,
+			&peer.LastSeenUnixMillis,
 			&peer.LastIPAddress,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		// Decyrpt the private_key
+		// Decrypt the private_key
 		peer.PrivateKey, err = DecryptAES(peer.PrivateKey, AES_KEY)
 		if err != nil {
 			return nil, err
@@ -81,7 +81,7 @@ func GetPeer(uuid string) (types.Peer, error) {
 		hostname,
 		enabled,
 		peer_type,
-		updated_millis,
+		updated_unixmillis,
 		private_key,
 		public_key,
 		pre_shared_key,
@@ -90,7 +90,7 @@ func GetPeer(uuid string) (types.Peer, error) {
 		remote_tun_address,
 		remote_subnets,
 		allowed_subnets,
-		last_seen_millis,
+		last_seen_unixmillis,
 		last_ip_address
 		FROM peers
 		WHERE uuid = @p1`
@@ -103,7 +103,7 @@ func GetPeer(uuid string) (types.Peer, error) {
 		&peer.Hostname,
 		&peer.Enabled,
 		&peer.PeerType,
-		&peer.UpdatedMillis,
+		&peer.UpdatedUnixMillis,
 		&peer.PrivateKey,
 		&peer.PublicKey,
 		&peer.PreSharedKey,
@@ -112,14 +112,14 @@ func GetPeer(uuid string) (types.Peer, error) {
 		&peer.RemoteTunAddress,
 		&peer.RemoteSubnets,
 		&peer.AllowedSubnets,
-		&peer.LastSeenMillis,
+		&peer.LastSeenUnixMillis,
 		&peer.LastIPAddress,
 	)
 	if err != nil {
 		return types.Peer{}, err
 	}
 
-	// Decyrpt the private_key
+	// Decrypt the private_key
 	peer.PrivateKey, err = DecryptAES(peer.PrivateKey, AES_KEY)
 	if err != nil {
 		return types.Peer{}, err
@@ -155,7 +155,7 @@ func InsertPeer(peer types.Peer) (err error) {
 		hostname,
 		enabled,
 		peer_type,
-		updated_millis,
+		updated_unixmillis,
 		private_key,
 		public_key,
 		pre_shared_key,
@@ -164,7 +164,7 @@ func InsertPeer(peer types.Peer) (err error) {
 		remote_tun_address,
 		remote_subnets,
 		allowed_subnets,
-		last_seen_millis,
+		last_seen_unixmillis,
 		last_ip_address) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15)`
 
 	_, err = DB.Exec(query,
@@ -172,7 +172,7 @@ func InsertPeer(peer types.Peer) (err error) {
 		peer.Hostname,
 		peer.Enabled,
 		peer.PeerType,
-		peer.UpdatedMillis,
+		peer.UpdatedUnixMillis,
 		peer.PrivateKey,
 		peer.PublicKey,
 		peer.PreSharedKey,
@@ -181,7 +181,7 @@ func InsertPeer(peer types.Peer) (err error) {
 		peer.RemoteTunAddress,
 		peer.RemoteSubnets,
 		peer.AllowedSubnets,
-		peer.LastSeenMillis,
+		peer.LastSeenUnixMillis,
 		peer.LastIPAddress)
 	return err
 }
@@ -206,7 +206,7 @@ func UpdatePeer(peer types.Peer) (err error) {
 		hostname=@p2,
 		enabled=@p3,
 		peer_type=@p4,
-		updated_millis=@p5,
+		updated_unixmillis=@p5,
 		private_key=@p6,
 		public_key=@p7,
 		pre_shared_key=@p8,
@@ -215,7 +215,7 @@ func UpdatePeer(peer types.Peer) (err error) {
 		remote_tun_address=@p11,
 		remote_subnets=@p12,
 		allowed_subnets=@p13,
-		last_seen_millis=@p14,
+		last_seen_unixmillis=@p14,
 		last_ip_address=@p15
 		WHERE uuid=@p1`
 
@@ -224,7 +224,7 @@ func UpdatePeer(peer types.Peer) (err error) {
 		peer.Hostname,
 		peer.Enabled,
 		peer.PeerType,
-		peer.UpdatedMillis,
+		peer.UpdatedUnixMillis,
 		peer.PrivateKey,
 		peer.PublicKey,
 		peer.PreSharedKey,
@@ -233,7 +233,7 @@ func UpdatePeer(peer types.Peer) (err error) {
 		peer.RemoteTunAddress,
 		peer.RemoteSubnets,
 		peer.AllowedSubnets,
-		peer.LastSeenMillis,
+		peer.LastSeenUnixMillis,
 		peer.LastIPAddress)
 	return err
 }
@@ -242,14 +242,4 @@ func DeletePeer(uuid string) error {
 	// Delete the peer from the database
 	_, err := DB.Exec("DELETE FROM peers WHERE uuid = @p1", uuid)
 	return err
-}
-
-func GetPeerSessionToken(uuid string) (hash string, err error) {
-	// Query the database
-	query := `SELECT session_token_hash FROM peers WHERE uuid = @p1`
-	row := DB.QueryRow(query, uuid)
-
-	// Scan the row
-	err = row.Scan(&hash)
-	return
 }
