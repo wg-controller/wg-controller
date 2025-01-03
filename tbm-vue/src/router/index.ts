@@ -1,16 +1,26 @@
-/**
- * router/index.ts
- *
- * Automatic routes for `./src/pages/*.vue`
- */
 
 // Composables
 import { createRouter, createWebHistory } from 'vue-router/auto'
-import { routes } from 'vue-router/auto-routes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
+  routes: [
+    {
+      name: 'Clients',
+      path: '/clients',
+      component: () => import('@/pages/clients.vue'),
+    },
+    {
+      name: 'Users',
+      path: '/users',
+      component: () => import('@/pages/users.vue'),
+    },
+    {
+      name: 'API Keys',
+      path: '/apikeys',
+      component: () => import('@/pages/apiKeys.vue'),
+    },
+  ],
 })
 
 // Workaround for https://github.com/vitejs/vite/issues/11804

@@ -7,11 +7,13 @@ import VueRouter from 'unplugin-vue-router/vite'
 
 // Utilities
 import { defineConfig } from 'vite'
+import mkcert from "vite-plugin-mkcert";
 import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    mkcert(),
     VueRouter(),
     Vue({
       template: { transformAssetUrls },
@@ -49,6 +51,8 @@ export default defineConfig({
     ],
   },
   server: {
+    // @ts-ignore
+    https: true,
     port: 3000,
   },
   css: {

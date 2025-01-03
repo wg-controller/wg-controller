@@ -8,3 +8,7 @@
 // @use 'vuetify/settings' with (
 //   $color-pack: false
 // );
+
+@use 'vuetify/settings' with (
+  $tab-slider-size: 4px,
+);
