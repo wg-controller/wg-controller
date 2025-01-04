@@ -2,9 +2,15 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"net"
+	"os"
 	"os/exec"
+	"strconv"
+	"time"
 
+	"github.com/lampy255/net-tbm/db"
 	"github.com/lampy255/net-tbm/types"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
@@ -32,9 +38,10 @@ func StartWireguard() {
 
 	go func() {
 		log.Println("Starting wireguard-go")
-		err := cmd.Run()
+		op, err := cmd.Output()
 		if err != nil {
-			log.Fatal("Error starting wireguard-go:", err)
+			fmt.Println(string(op))
+			os.Exit(1)
 		}
 	}()
 
@@ -56,40 +63,120 @@ func StopWireguard() {
 	}
 }
 
-// Overwrites wireguard-go configuration with supplied peers
-func OverwritePeers(peers []types.Peer) error {
-	wg.ConfigureDevice(ENV.INTERFACE_NAME, wgtypes.Config{
+func SyncWireguardConfiguration() error {
+	// Get all peers from the database
+	peers, err := db.GetPeers()
+	if err != nil {
+		return err
+	}
+
+	// Convert peers to wireguard-go peer configurations
+	var wgPeers []wgtypes.PeerConfig
+	for _, peer := range peers {
+		// Convert KeepAliveSeconds to time.Duration
+		keepAliveDuration := time.Duration(peer.KeepAliveSeconds) * time.Second
+
+		// Parse PublicKey
+		publicKey, err := wgtypes.ParseKey(peer.PublicKey)
+		if err != nil {
+			return err
+		}
+
+		// Parse PreSharedKey
+		preSharedKey, err := wgtypes.ParseKey(peer.PreSharedKey)
+		if err != nil {
+			return err
+		}
+
+		// Parse allowed subnets
+		allowedIPs := []net.IPNet{}
+		for _, subnet := range peer.RemoteSubnets {
+			_, ipNet, err := net.ParseCIDR(subnet)
+			if err != nil {
+				break
+			}
+			allowedIPs = append(allowedIPs, *ipNet)
+		}
+
+		// Create wireguard-go peer configuration
+		wgPeer := wgtypes.PeerConfig{
+			PublicKey:                   publicKey,
+			PresharedKey:                &preSharedKey,
+			PersistentKeepaliveInterval: &keepAliveDuration,
+			AllowedIPs:                  allowedIPs,
+		}
+		wgPeers = append(wgPeers, wgPeer)
+	}
+
+	// Parse ENV.WG_PRIVATE_KEY
+	privateKey, err := wgtypes.ParseKey(ENV.WG_PRIVATE_KEY)
+	if err != nil {
+		return err
+	}
+
+	// Convert ENV.WG_PORT to int
+	wgPort, err := strconv.Atoi(ENV.WG_PORT)
+	if err != nil {
+		return err
+	}
+
+	// Overwrite the wireguard-go configuration
+	return wg.ConfigureDevice(ENV.INTERFACE_NAME, wgtypes.Config{
 		ReplacePeers: true,
+		Peers:        wgPeers,
+		PrivateKey:   &privateKey,
+		ListenPort:   &wgPort,
 	})
-
-	return nil
 }
 
-func GeneratePeerConfig(peer types.Peer) (wgtypes.PeerConfig, error) {
-	return wgtypes.PeerConfig{}, nil
-}
-
-func GetWireguardPeer(storedPeer types.Peer) (types.PeerExtended, error) {
+func GetWireguardPeer(storedPeer types.Peer) (types.Peer, error) {
 	// Get wireguard data
 	device, err := wg.Device(ENV.INTERFACE_NAME)
 	if err != nil {
-		return types.PeerExtended{}, err
+		return types.Peer{}, err
 	}
 
 	// Find stored peer in wireguard peers
 	for _, wgPeer := range device.Peers {
 		if wgPeer.PresharedKey.String() == storedPeer.PreSharedKey {
 			// Create extended peer
-			ExtendedPeer := types.PeerExtended{
-				Peer:          storedPeer,
-				TransmitBytes: wgPeer.TransmitBytes,
-				ReceiveBytes:  wgPeer.ReceiveBytes,
+			storedPeer.TransmitBytes = wgPeer.TransmitBytes
+			storedPeer.ReceiveBytes = wgPeer.ReceiveBytes
+			storedPeer.LastSeenUnixMillis = wgPeer.LastHandshakeTime.UnixMilli()
+			if wgPeer.Endpoint != nil {
+				storedPeer.LastIPAddress = wgPeer.Endpoint.IP.String()
 			}
-			ExtendedPeer.LastSeenUnixMillis = wgPeer.LastHandshakeTime.UnixMilli()
-			ExtendedPeer.LastIPAddress = wgPeer.Endpoint.IP.String()
-			return ExtendedPeer, nil
+			return storedPeer, nil
 		}
 	}
 
-	return types.PeerExtended{}, errors.New("peer not found")
+	return types.Peer{}, errors.New("peer not found")
+}
+
+func NewWireguardPrivateKey() (privKey string, err error) {
+	// Generate new key pair
+	key, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		return "", err
+	}
+
+	return key.String(), nil
+}
+
+func NewWireguardPreSharedKey() (preSharedKey string, err error) {
+	key, err := wgtypes.GenerateKey()
+	if err != nil {
+		return "", err
+	}
+
+	return key.String(), nil
+}
+
+func GetWireguardPublicKey(privateKey string) (pubKey string, err error) {
+	key, err := wgtypes.ParseKey(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	return key.PublicKey().String(), nil
 }
