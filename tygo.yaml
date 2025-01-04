@@ -1,0 +1,7 @@
+# You can specify more than one package
+packages:
+  # The package path just like you would import it in Go
+  - path: "github.com/lampy255/net-tbm/types"
+
+    # Where this output should be written to.
+    output_path: "./tbm-vue/src/types/shared.ts"
