@@ -5,27 +5,28 @@ import (
 	"time"
 )
 
-func GetSession(hash string) (expiresUnixMillis int64, err error) {
+func GetSession(hash []byte) (expiresUnixMillis int64, email string, err error) {
 	// Query the database
 	query := `SELECT
-		expires_unix_millis
+		expires_unixmillis,
+		user_email
 		FROM sessions
 		WHERE hash = ?`
 	row := DB.QueryRow(query, hash)
 
 	// Scan the row
-	err = row.Scan(&expiresUnixMillis)
+	err = row.Scan(&expiresUnixMillis, &email)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
-	return expiresUnixMillis, nil
+	return expiresUnixMillis, email, nil
 }
 
-func CreateSession(hash string, userEmail string, expiresUnixMillis int64) error {
+func CreateSession(hash []byte, userEmail string, expiresUnixMillis int64) error {
 	// Insert the session into the database
 	query := `INSERT INTO sessions
-		(hash, user_email, expires_unix_millis)
+		(hash, user_email, expires_unixmillis)
 		VALUES (?, ?, ?)`
 	_, err := DB.Exec(query, hash, userEmail, expiresUnixMillis)
 	if err != nil {
@@ -48,7 +49,7 @@ func DeleteUserSessions(userEmail string) error {
 
 func GarbageCollectSessions() {
 	// Query the database
-	query := `DELETE FROM sessions WHERE expires_unix_millis < ?`
+	query := `DELETE FROM sessions WHERE expires_unixmillis < ?`
 	_, err := DB.Exec(query, time.Now().UnixMilli())
 	if err != nil {
 		log.Println(err)

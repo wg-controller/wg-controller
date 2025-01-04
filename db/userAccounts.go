@@ -10,6 +10,7 @@ func GetAccounts() ([]types.UserAccount, error) {
 		email,
 		role,
 		failed_attempts,
+		last_active_unixmillis
 		FROM user_accounts`
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -24,6 +25,7 @@ func GetAccounts() ([]types.UserAccount, error) {
 			&account.Email,
 			&account.Role,
 			&account.FailedAttempts,
+			&account.LastActiveUnixMillis,
 		)
 		if err != nil {
 			return nil, err
@@ -40,6 +42,7 @@ func GetAccount(email string) (types.UserAccount, error) {
 		email,
 		role,
 		failed_attempts,
+		last_active_unixmillis
 		FROM user_accounts
 		WHERE email = ?`
 	row := DB.QueryRow(query, email)
@@ -50,6 +53,7 @@ func GetAccount(email string) (types.UserAccount, error) {
 		&account.Email,
 		&account.Role,
 		&account.FailedAttempts,
+		&account.LastActiveUnixMillis,
 	)
 	if err != nil {
 		return types.UserAccount{}, err
@@ -58,13 +62,14 @@ func GetAccount(email string) (types.UserAccount, error) {
 	return account, nil
 }
 
-func InsertAccount(email string, role string, passwordHash string, passwordSalt string) error {
+func InsertAccount(email string, role string, passwordHash []byte, passwordSalt []byte) error {
 	query := `INSERT INTO user_accounts (
 		email,
 		role,
 		failed_attempts,
 		password_hash,
-		password_salt
+		password_salt,
+		last_active_unixmillis
 	) VALUES (?, ?, ?, ?, ?, ?)`
 
 	_, err := DB.Exec(query,
@@ -73,6 +78,7 @@ func InsertAccount(email string, role string, passwordHash string, passwordSalt 
 		0,
 		passwordHash,
 		passwordSalt,
+		0,
 	)
 	return err
 }
@@ -91,7 +97,7 @@ func DeleteAdminAccounts() error {
 	return err
 }
 
-func GetAccountPasswordHash(email string) (hash string, salt string, err error) {
+func GetAccountPasswordHash(email string) (hash []byte, salt []byte, err error) {
 	query := `SELECT
 		password_hash,
 		password_salt
@@ -104,7 +110,7 @@ func GetAccountPasswordHash(email string) (hash string, salt string, err error) 
 	return
 }
 
-func UpdateAccountPasswordHash(email string, hash string, salt string) error {
+func UpdateAccountPasswordHash(email string, hash []byte, salt []byte) error {
 	query := `UPDATE user_accounts SET
 		password_hash = ?,
 		password_salt = ?
@@ -129,5 +135,14 @@ func ResetAccountFailedAttempts(email string) error {
 		WHERE email = ?`
 
 	_, err := DB.Exec(query, email)
+	return err
+}
+
+func UpdateAccountLastActive(email string, unixMillis int64) error {
+	query := `UPDATE user_accounts SET
+		last_active_unixmillis = ?
+		WHERE email = ?`
+
+	_, err := DB.Exec(query, unixMillis, email)
 	return err
 }

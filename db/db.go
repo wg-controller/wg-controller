@@ -32,25 +32,23 @@ func InitDB(EncryptionKey []byte) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
 	// Create the peers table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS peers (
 		uuid TEXT PRIMARY KEY,
 		hostname TEXT UNIQUE,
 		enabled BOOLEAN,
-		peer_type TEXT,
-		updated_unixmillis INTEGER,
 		private_key TEXT,
 		public_key TEXT,
 		pre_shared_key TEXT,
-		keep_alive_unixmillis INTEGER,
+		keep_alive_seconds INTEGER,
 		local_tun_address TEXT,
 		remote_tun_address TEXT,
 		remote_subnets TEXT,
 		allowed_subnets TEXT,
 		last_seen_unixmillis INTEGER,
 		last_ip_address TEXT,
+		attributes TEXT
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -61,8 +59,9 @@ func InitDB(EncryptionKey []byte) {
 		email TEXT PRIMARY KEY,
 		role TEXT,
 		failed_attempts INTEGER,
-		password_hash TEXT,
-		password_salt TEXT,
+		password_hash BLOB,
+		password_salt BLOB,
+		last_active_unixmillis INTEGER
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -70,10 +69,10 @@ func InitDB(EncryptionKey []byte) {
 
 	// Create the sessions table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
-		hash TEXT PRIMARY KEY,
+		hash BLOB PRIMARY KEY,
 		expires_unixmillis INTEGER,
 		user_email TEXT,
-		role TEXT,
+		role TEXT
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -82,10 +81,10 @@ func InitDB(EncryptionKey []byte) {
 	// Create the api_keys table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS api_keys (
 		uuid TEXT PRIMARY KEY,
-		hash TEXT,
+		hash BLOB,
 		expires_unixmillis INTEGER,
 		role TEXT,
-		name TEXT,
+		name TEXT
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -96,4 +95,6 @@ func InitDB(EncryptionKey []byte) {
 
 	// Init sessions garbage collector
 	go SessionsGarbageCollector()
+
+	log.Println("Database initialized")
 }
