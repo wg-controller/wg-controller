@@ -19,11 +19,11 @@ export default createVuetify({
       default: {
         dark: false,
         colors: {
-          primary: "rgb(45, 97, 255)",
+          primary: "#6390C7",
+          secondary: "rgb(0, 33, 72)",
           background: "rgb(210, 216, 222)",
           oddRow: "rgb(226, 229, 231)",
           surface: "rgb(235, 235, 235)",
-          appBar: "rgb(0, 33, 72)"
         }
       }
     }

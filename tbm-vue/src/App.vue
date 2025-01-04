@@ -7,48 +7,100 @@ const store = useStore(key);
 
 <template>
   <v-app>
-    <v-app-bar app density="compact" :elevation="0" color="appBar">
-      <template v-slot:prepend>
-        <v-icon class="mx-3" size="x-large" color="primary">mdi-vpn</v-icon>
+    <v-snackbar
+      v-model="store.state.SnackBarShow"
+      location="bottom left"
+      :color="store.state.SnackBarError ? 'red-darken-1' : 'secondary'"
+      :timer="store.state.SnackBarError ? 'red-darken-2' : 'primary'"
+      :timeout="5000"
+      max-width="400"
+      close-on-content-click
+      transition="slide-x-transition"
+    >
+      <v-icon class="mr-3">
+        mdi-information
+      </v-icon>
+      <span>{{ store.state.SnackBarText }}</span>
+    </v-snackbar>
+    <v-app-bar
+      app
+      density="compact"
+      :elevation="0"
+      color="secondary"
+    >
+      <template #[`prepend`]>
+        <v-icon
+          class="ml-3 mr-4"
+          size="x-large"
+          color="primary"
+        >
+          mdi-vpn
+        </v-icon>
         <v-tabs slider-color="primary">
-          <v-tab to="/clients">Clients</v-tab>
-          <v-tab to="/apikeys">API Keys</v-tab>
-          <v-tab to="/users">Users</v-tab>
-          
+          <v-tab to="/clients">
+            Clients
+          </v-tab>
+          <v-tab to="/apikeys">
+            API Keys
+          </v-tab>
+          <v-tab to="/users">
+            Users
+          </v-tab>
         </v-tabs>
       </template>
 
-      <template v-slot:append>
-        <v-icon class="mx-3" size="x-large">mdi-account-circle</v-icon>
+      <template #[`append`]>
+        <v-icon
+          class="mx-3"
+          size="x-large"
+        >
+          mdi-account-circle
+        </v-icon>
       </template>
     </v-app-bar>
     <v-main>
       <router-view />
     </v-main>
 
-    <v-dialog v-model="store.state.ConfirmDialogShow" width="460" scrim="grey-darken-1">
+    <v-dialog
+      v-model="store.state.ConfirmDialogShow"
+      width="460"
+      scrim="grey-darken-1"
+    >
       <v-card>
         <v-form
           ref="entryForm"
           @submit.prevent="
             store.state.ConfirmDialogCallback(),
-              (store.state.ConfirmDialogShow = false)
+            (store.state.ConfirmDialogShow = false)
           "
         >
-          <v-card-title class="text-h5 mb-5"> Please Confirm </v-card-title>
+          <v-card-title class="text-h6 mb-1 ml-2 mt-4">
+            {{ store.state.ConfirmDialogTitle }}
+          </v-card-title>
 
-          <v-card-text class="text-subtitle-1 mx-2">
+          <v-card-text class="text-subtitle-1 ml-2">
             {{ store.state.ConfirmDialogText }}
           </v-card-text>
 
-          <v-card-actions>
-            <v-spacer></v-spacer>
+          <v-card-actions class="mb-3 mr-3">
+            <v-spacer />
 
-            <v-btn color="primary" @click="store.state.ConfirmDialogShow = false">
+            <v-btn
+              color="secondary"
+              variant="outlined"
+              @click="store.state.ConfirmDialogShow = false"
+            >
               Cancel
             </v-btn>
 
-            <v-btn color="primary" type="submit"> Confirm </v-btn>
+            <v-btn
+              color="secondary"
+              type="submit"
+              variant="flat"
+            >
+              Confirm
+            </v-btn>
           </v-card-actions>
         </v-form>
       </v-card>
@@ -57,6 +109,10 @@ const store = useStore(key);
 </template>
 
 <style>
+.html, body {
+  min-width: 750px !important;
+}
+
 .v-table__wrapper > table > tbody > tr:nth-of-type(odd) {
   background-color: rgb(var(--v-theme-oddRow)) !important;
 }

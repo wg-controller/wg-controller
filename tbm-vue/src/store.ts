@@ -10,8 +10,12 @@ export const store = createStore<StoreStruct>({
   state() {
     return {
       ConfirmDialogShow: false,
+      ConfirmDialogTitle: "",
       ConfirmDialogText: "",
       ConfirmDialogCallback: () => {},
+      SnackBarShow: false,
+      SnackBarText: "",
+      SnackBarError: false,
     };
   },
 });
