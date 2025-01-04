@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/lampy255/net-tbm/db"
 	"github.com/lampy255/net-tbm/types"
 )
@@ -33,15 +34,19 @@ func StartAPI() {
 	private.PUT("/peers/:uuid", PUT_Peer)
 	private.PATCH("/peers/:uuid", PATCH_Peer)
 	private.DELETE("/peers/:uuid", DELETE_Peer)
+	private.GET("/peerinit", GET_InitPeer)
 
 	private.GET("/accounts", GET_Accounts)
 	private.PUT("/accounts/:email", PUT_Account)
 	private.PATCH("/accounts/:email", PATCH_Account)
 	private.DELETE("/accounts/:email", DELETE_Account)
+	private.DELETE("/accounts/:email/failedattempts", DELETE_AccountFailedAttempts)
 
 	private.GET("/apikeys", GET_APIKeys)
 	private.PUT("/apikeys/:uuid", PUT_APIKey)
 	private.DELETE("/apikeys/:uuid", DELETE_APIKey)
+
+	private.GET("/serverinfo", GET_ServerInfo)
 
 	private.GET("/poll", GET_LongPoll)
 
@@ -56,6 +61,7 @@ func StartAPI() {
 func GET_Health(c *gin.Context) {
 	_, err := GetWireguard()
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -70,16 +76,18 @@ func GET_Health(c *gin.Context) {
 func GET_Peers(c *gin.Context) {
 	peers, err := db.GetPeers()
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	var extendedPeers []types.PeerExtended
+	var extendedPeers []types.Peer
 	for _, peer := range peers {
 		extendedPeer, err := GetWireguardPeer(peer)
 		if err != nil {
+			log.Println(err)
 			c.JSON(500, gin.H{
 				"error": err.Error(),
 			})
@@ -102,6 +110,7 @@ func GET_Peer(c *gin.Context) {
 
 	peer, err := db.GetPeer(uuid)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -110,6 +119,7 @@ func GET_Peer(c *gin.Context) {
 
 	extendedPeer, err := GetWireguardPeer(peer)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -128,23 +138,69 @@ func PUT_Peer(c *gin.Context) {
 		return
 	}
 
+	// Parse the peer request body
 	var peer types.Peer
 	peer.UUID = uuid
 	err := c.BindJSON(&peer)
 	if err != nil {
+		log.Println(err)
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	err = db.InsertPeer(peer)
+	// Generate pre-shared key
+	preSharedKey, err := NewWireguardPreSharedKey()
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
+	peer.PreSharedKey = preSharedKey
+
+	// Generate private key
+	privKey, err := NewWireguardPrivateKey()
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	peer.PrivateKey = privKey
+
+	// Generate public key
+	pubKey, err := GetWireguardPublicKey(privKey)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	peer.PublicKey = pubKey
+
+	// Insert peer into database
+	err = db.InsertPeer(peer)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Resync wireguard configuration
+	err = SyncWireguardConfiguration()
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Push config to peer
+	PushPeerConfig(peer)
 
 	c.JSON(200, gin.H{
 		"status": "ok",
@@ -164,6 +220,7 @@ func PATCH_Peer(c *gin.Context) {
 	peer.UUID = uuid
 	err := c.BindJSON(&peer)
 	if err != nil {
+		log.Println(err)
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
@@ -172,11 +229,21 @@ func PATCH_Peer(c *gin.Context) {
 
 	err = db.UpdatePeer(peer)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
+
+	// Resync wireguard configuration
+	err = SyncWireguardConfiguration()
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Push config to peer
+	PushPeerConfig(peer)
 
 	c.JSON(200, gin.H{
 		"status": "ok",
@@ -194,10 +261,17 @@ func DELETE_Peer(c *gin.Context) {
 
 	err := db.DeletePeer(uuid)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		return
+	}
+
+	// Resync wireguard configuration
+	err = SyncWireguardConfiguration()
+	if err != nil {
+		log.Println(err)
 	}
 
 	c.JSON(200, gin.H{
@@ -205,9 +279,69 @@ func DELETE_Peer(c *gin.Context) {
 	})
 }
 
+func GET_InitPeer(c *gin.Context) {
+	InitPeer := types.PeerInit{}
+
+	// Generate UUID
+	InitPeer.UUID = uuid.New().String()
+
+	// Generate private key
+	privKey, err := NewWireguardPrivateKey()
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+	InitPeer.PrivateKey = privKey
+
+	// Generate public key
+	pubKey, err := GetWireguardPublicKey(ENV.WG_PRIVATE_KEY)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+	InitPeer.PublicKey = pubKey
+
+	// Generate pre-shared key
+	preSharedKey, err := NewWireguardPreSharedKey()
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+	InitPeer.PreSharedKey = preSharedKey
+
+	// Get current peers to generate a unique localTunAddress
+	peers, err := db.GetPeers()
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
+	// Extract used addresses
+	var usedAddresses []string
+	for _, peer := range peers {
+		usedAddresses = append(usedAddresses, peer.LocalTunAddress)
+	}
+
+	// Generate a unique address
+	address, err := GetUniqueAddress(usedAddresses, ENV.SERVER_CIDR)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+	InitPeer.LocalTunAddress = address
+
+	c.JSON(200, InitPeer)
+}
+
 func GET_Accounts(c *gin.Context) {
 	accounts, err := db.GetAccounts()
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -230,6 +364,7 @@ func PUT_Account(c *gin.Context) {
 	var account types.UserAccountWithPass
 	err := c.BindJSON(&account)
 	if err != nil {
+		log.Println(err)
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
@@ -248,7 +383,7 @@ func PUT_Account(c *gin.Context) {
 	}
 
 	// Hash password
-	hash, err := HashString(account.Password, salt)
+	hash, err := GenerateDeterministicHash([]byte(account.Password), salt)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -260,6 +395,7 @@ func PUT_Account(c *gin.Context) {
 	// Insert account
 	err = db.InsertAccount(email, account.Role, hash, salt)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -284,6 +420,7 @@ func PATCH_Account(c *gin.Context) {
 	var account types.UserAccountWithPass
 	err := c.BindJSON(&account)
 	if err != nil {
+		log.Println(err)
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
@@ -302,7 +439,7 @@ func PATCH_Account(c *gin.Context) {
 	}
 
 	// Hash password
-	hash, err := HashString(account.Password, salt)
+	hash, err := GenerateDeterministicHash([]byte(account.Password), salt)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -314,10 +451,17 @@ func PATCH_Account(c *gin.Context) {
 	// Update account
 	err = db.UpdateAccountPasswordHash(email, hash, salt)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
 		return
+	}
+
+	// Delete all sessions for this account
+	err = db.DeleteUserSessions(email)
+	if err != nil {
+		log.Println(err)
 	}
 
 	c.JSON(200, gin.H{
@@ -334,8 +478,48 @@ func DELETE_Account(c *gin.Context) {
 		return
 	}
 
+	// Check that this is not the master admin account
+	if email == ENV.ADMIN_EMAIL {
+		c.JSON(400, gin.H{
+			"error": "cannot delete master admin account",
+		})
+		return
+	}
+
+	// Delete account
 	err := db.DeleteAccount(email)
 	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Delete all sessions for this account
+	err = db.DeleteUserSessions(email)
+	if err != nil {
+		log.Println(err)
+	}
+
+	c.JSON(200, gin.H{
+		"status": "ok",
+	})
+}
+
+func DELETE_AccountFailedAttempts(c *gin.Context) {
+	email := c.Param("email")
+	if email == "" {
+		c.JSON(400, gin.H{
+			"error": "email is required",
+		})
+		return
+	}
+
+	// Reset failed attempts
+	err := db.ResetAccountFailedAttempts(email)
+	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -350,6 +534,7 @@ func DELETE_Account(c *gin.Context) {
 func GET_APIKeys(c *gin.Context) {
 	apiKeys, err := db.GetApiKeys()
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -372,6 +557,7 @@ func PUT_APIKey(c *gin.Context) {
 	var apiKey types.APIKey
 	err := c.BindJSON(&apiKey)
 	if err != nil {
+		log.Println(err)
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
@@ -382,6 +568,7 @@ func PUT_APIKey(c *gin.Context) {
 	// Insert api key
 	err = db.InsertApiKey(apiKey)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -404,6 +591,7 @@ func DELETE_APIKey(c *gin.Context) {
 
 	err := db.DeleteApiKey(uuid)
 	if err != nil {
+		log.Println(err)
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -413,4 +601,13 @@ func DELETE_APIKey(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})
+}
+
+func GET_ServerInfo(c *gin.Context) {
+	serverInfo := types.ServerInfo{
+		PublicEndpoint: ENV.PUBLIC_HOST + ":" + ENV.WG_PORT,
+		NameServers:    ENV.NAME_SERVERS,
+	}
+
+	c.JSON(200, serverInfo)
 }
