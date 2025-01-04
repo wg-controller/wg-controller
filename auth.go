@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"log"
@@ -10,42 +11,36 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/lampy255/net-tbm/db"
 	"github.com/lampy255/net-tbm/types"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const MaxFailedAttempts = 5
 
-// Hashes an input string with a optional salt
-func HashString(input string, salt string) (hash string, err error) {
+func GenerateDeterministicHash(input []byte, salt []byte) (hash []byte, err error) {
 	// Check for empty input
-	if input == "" {
-		return "", errors.New("input string cannot be empty")
+	if len(input) == 0 {
+		return []byte{}, errors.New("input cannot be empty")
 	}
 
-	// Convert to byte slices
-	inputBytes := []byte(input)
-	saltBytes := []byte(salt)
-
 	// Combine the input and salt
-	combined := append(inputBytes, saltBytes...)
+	joined := append(input, salt...)
 
-	// Hash the combined input and salt
-	output, cryptErr := bcrypt.GenerateFromPassword(combined, bcrypt.DefaultCost)
+	// Hash the input using SHA256
+	h := sha256.New()
+	_, err = h.Write(joined)
+	if err != nil {
+		return []byte{}, err
+	}
 
-	return string(output), cryptErr
+	return h.Sum(nil), nil
 }
 
-func NewSalt() (salt string, err error) {
-	return GenerateRandomString(16)
-}
-
-func NewSessionToken() (token string, err error) {
-	return GenerateRandomString(32)
+func NewSalt() (salt []byte, err error) {
+	return GenerateRandomBytes(16)
 }
 
 func GenerateRandomString(s int) (string, error) {
 	b, err := GenerateRandomBytes(s)
-	return base64.URLEncoding.EncodeToString(b), err
+	return base64.StdEncoding.EncodeToString(b), err
 }
 
 func GenerateRandomBytes(n int) ([]byte, error) {
@@ -74,8 +69,16 @@ func AuthMiddleware(c *gin.Context) {
 
 	// If sessionId cookie is present, check the session
 	if session != "" {
+		// Decode Base64
+		tokenBytes, err := base64.URLEncoding.DecodeString(session)
+		if err != nil {
+			log.Println(err)
+			c.AbortWithStatus(500)
+			return
+		}
+
 		// Hash the session token
-		hash, err := HashString(session, "")
+		tokenHash, err := GenerateDeterministicHash(tokenBytes, []byte{})
 		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(500)
@@ -83,9 +86,10 @@ func AuthMiddleware(c *gin.Context) {
 		}
 
 		// Check for the hashed session token in the DB
-		expires, err := db.GetSession(hash)
+		expires, email, err := db.GetSession(tokenHash)
 		if err != nil {
 			c.AbortWithStatus(403)
+			log.Println(err)
 			log.Println("Invalid sessionId from IP:", c.ClientIP())
 			return
 		}
@@ -94,6 +98,12 @@ func AuthMiddleware(c *gin.Context) {
 		if expires < time.Now().UnixMilli() {
 			c.AbortWithStatus(403)
 			return
+		}
+
+		// Update last active time for user
+		err = db.UpdateAccountLastActive(email, time.Now().UnixMilli())
+		if err != nil {
+			log.Println(err)
 		}
 
 		c.Next()
@@ -115,8 +125,16 @@ func AuthMiddleware(c *gin.Context) {
 			return
 		}
 
+		// Decode Base64
+		tokenBytes, err := base64.StdEncoding.DecodeString(token)
+		if err != nil {
+			log.Println(err)
+			c.AbortWithStatus(500)
+			return
+		}
+
 		// Hash the api key
-		hash, err := HashString(token, "")
+		hash, err := GenerateDeterministicHash(tokenBytes, []byte{})
 		if err != nil {
 			log.Println(err)
 			c.AbortWithStatus(500)
@@ -149,13 +167,24 @@ func POST_PreLogin(c *gin.Context) {
 	// Check for session cookie
 	session, err := c.Cookie("sessionId")
 	if err != nil {
-		c.JSON(403, gin.H{
+		c.JSON(401, gin.H{
 			"error": "not logged in",
 		})
+		return
+	}
+
+	// Decode Base64
+	sessionBytes, err := base64.URLEncoding.DecodeString(session)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "internal server error",
+		})
+		return
 	}
 
 	// Hash the session token
-	hash, err := HashString(session, "")
+	hash, err := GenerateDeterministicHash(sessionBytes, []byte{})
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -165,18 +194,27 @@ func POST_PreLogin(c *gin.Context) {
 	}
 
 	// Check for the hashed session token in the DB
-	expires, err := db.GetSession(hash)
+	expires, email, err := db.GetSession(hash)
 	if err != nil {
-		c.JSON(403, gin.H{
+		log.Println(err)
+		c.JSON(401, gin.H{
 			"error": "invalid session",
 		})
+		return
 	}
 
 	// Check if the session token is expired
 	if expires < time.Now().UnixMilli() {
-		c.JSON(403, gin.H{
+		c.JSON(401, gin.H{
 			"error": "session expired",
 		})
+		return
+	}
+
+	// Update last active time for user
+	err = db.UpdateAccountLastActive(email, time.Now().UnixMilli())
+	if err != nil {
+		log.Println(err)
 	}
 
 	c.JSON(200, gin.H{
@@ -211,7 +249,7 @@ func POST_Login(c *gin.Context) {
 		log.Println("Error getting account", login.Email, "from IP:", c.ClientIP())
 		log.Println(err)
 
-		c.JSON(403, gin.H{
+		c.JSON(401, gin.H{
 			"error": "invalid email or password",
 		})
 		return
@@ -220,14 +258,14 @@ func POST_Login(c *gin.Context) {
 	// Check if the user is suspended
 	if account.FailedAttempts >= MaxFailedAttempts {
 		log.Println("User is suspended:", login.Email, "from IP:", c.ClientIP())
-		c.JSON(403, gin.H{
+		c.JSON(401, gin.H{
 			"error": "account suspended",
 		})
 		return
 	}
 
 	// Get the stored password hash and salt
-	hash, salt, err := db.GetAccountPasswordHash(login.Email)
+	storedHash, salt, err := db.GetAccountPasswordHash(login.Email)
 	if err != nil {
 		log.Println("Error getting password hash for user:", login.Email, "from IP:", c.ClientIP())
 		log.Println(err)
@@ -237,21 +275,31 @@ func POST_Login(c *gin.Context) {
 		return
 	}
 
-	// Compare the password hashes
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(login.Password+salt))
+	// Hash the input password
+	testHash, err := GenerateDeterministicHash([]byte(login.Password), salt)
 	if err != nil {
-		log.Println("Invalid credentials for user:", login.Email, "from IP:", c.ClientIP())
-
-		// Increment the failed attempts
-		err := db.IncrementAccountFailedAttempts(login.Email)
-		if err != nil {
-			log.Println(err)
-		}
-
-		c.JSON(403, gin.H{
-			"error": "invalid email or password",
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "internal server error",
 		})
 		return
+	}
+
+	// Compare the stored hash with the input hash
+	for i := 0; i < len(storedHash); i++ {
+		if storedHash[i] != testHash[i] {
+			log.Println("Invalid credentials for user:", login.Email, "from IP:", c.ClientIP())
+			c.JSON(401, gin.H{
+				"error": "invalid email or password",
+			})
+
+			// Increment the failed attempts
+			err := db.IncrementAccountFailedAttempts(login.Email)
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}
 	}
 
 	// Reset the failed attempts
@@ -261,7 +309,7 @@ func POST_Login(c *gin.Context) {
 	}
 
 	// Generate a session token
-	token, err := NewSessionToken()
+	tokenBytes, err := GenerateRandomBytes(32)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -271,7 +319,7 @@ func POST_Login(c *gin.Context) {
 	}
 
 	// Hash the session token
-	hash, err = HashString(token, salt)
+	tokenHash, err := GenerateDeterministicHash(tokenBytes, []byte{})
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -280,8 +328,8 @@ func POST_Login(c *gin.Context) {
 		return
 	}
 
-	// Store the session token
-	err = db.CreateSession(hash, login.Email, time.Now().Add(time.Hour*12).UnixMilli())
+	// Store the hashed session token
+	err = db.CreateSession(tokenHash, login.Email, time.Now().Add(time.Hour*12).UnixMilli())
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -289,9 +337,12 @@ func POST_Login(c *gin.Context) {
 		})
 		return
 	}
+
+	// Base64 encode the session token
+	tokenBase64 := base64.URLEncoding.EncodeToString(tokenBytes)
 
 	// Set cookie
-	c.SetCookie("sessionId", token, 0, "", "", false, true)
+	c.SetCookie("sessionId", tokenBase64, 0, "", "", true, true)
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})

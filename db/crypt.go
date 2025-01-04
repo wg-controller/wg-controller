@@ -6,52 +6,54 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 )
 
 func EncryptAES(data string, key []byte) (string, error) {
+	// Create a new AES cipher using our 32 byte key
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
 	}
 
-	// Generate a random IV
-	iv := make([]byte, aes.BlockSize)
-	if _, err := rand.Read(iv); err != nil {
+	plainText := []byte(data)
+
+	ciphertext := make([]byte, aes.BlockSize+len(plainText))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return "", err
 	}
 
-	// Create a new CBC mode cipher
-	cipherText := make([]byte, len(data))
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(cipherText, []byte(data))
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plainText)
 
-	// Combine IV and ciphertext and base64-encode it
-	encryptedData := append(iv, cipherText...)
-	return base64.StdEncoding.EncodeToString(encryptedData), nil
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-func DecryptAES(encryptedData string, key []byte) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(encryptedData)
+func DecryptAES(value string, key []byte) (string, error) {
+	ciphertext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("decoding base64: %w", err)
 	}
-
-	if len(data) < aes.BlockSize {
-		return "", errors.New("ciphertext too short")
-	}
-
-	// Extract the IV
-	iv := data[:aes.BlockSize]
-	cipherText := data[aes.BlockSize:]
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
 	}
 
-	mode := cipher.NewCBCDecrypter(block, iv)
-	decryptedData := make([]byte, len(cipherText))
-	mode.CryptBlocks(decryptedData, cipherText)
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	if len(ciphertext) < aes.BlockSize {
+		return "", errors.New("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
 
-	return string(decryptedData), nil
+	stream := cipher.NewCFBDecrypter(block, iv)
+
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return string(ciphertext), nil
 }

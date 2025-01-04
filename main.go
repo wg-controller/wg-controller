@@ -7,41 +7,53 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/lampy255/net-tbm/db"
-	"github.com/lampy255/net-tbm/types"
 )
 
 // Version
 var IMAGE_TAG string
 
 // Global Vars
-var ENV types.Env
+type Env struct {
+	PUBLIC_HOST    string   // Public host for web interface
+	ADMIN_EMAIL    string   // Admin email
+	ADMIN_PASS     string   // Admin password
+	WG_PRIVATE_KEY string   // Private key for wireguard
+	DB_AES_KEY     []byte   // Base64 encoded 32 Byte AES key for encrypting private keys
+	SERVER_CIDR    string   // CIDR Network for tunnel addresses (optional)
+	NAME_SERVERS   []string // List of public DNS servers to use (optional)
+	INTERFACE_NAME string   // Override kernel interface name (optional)
+	WG_PORT        string   // Port for wireguard to listen on (optional)
+	API_PORT       string   // Port for API to listen on (optional)
+}
+
+var ENV Env
 
 func main() {
 	// Check for command line arguments
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "wg-key-pair":
-			privateKey, publicKey, err := NewWireguardKeyPair()
+		case "generate-wg-key":
+			privateKey, err := NewWireguardPrivateKey()
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString("WG_PRIVATE_KEY: " + string(privateKey[:]) + "\n")
-			os.Stdout.WriteString("WG_PUBLIC_KEY: " + string(publicKey[:]) + "\n")
+			os.Stdout.WriteString(privateKey)
 			os.Exit(0)
-		case "aes-key":
-			key, err := NewAESKey()
+		case "generate-db-key":
+			key, err := GenerateRandomString(32)
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString("DB_AES_KEY: " + key)
+			os.Stdout.WriteString(key)
 			os.Exit(0)
 		default:
 			fmt.Println("Available commands:")
-			fmt.Println("  wg-key-pair:", "Generate a new Wireguard key pair")
-			fmt.Println("  aes-key:", "Generate a new AES key")
+			fmt.Println("  generate-wg-key:", "Generate a new Wireguard private key")
+			fmt.Println("  generate-db-key:", "Generate a new AES key")
 			os.Exit(0)
 		}
 	}
@@ -55,9 +67,21 @@ func main() {
 	// Initialize the database
 	db.InitDB([]byte(ENV.DB_AES_KEY))
 
+	// Initialize the admin account
+	InitAdminAccount()
+
 	// Start wireguard-go
 	StartWireguard()
 	defer StopWireguard()
+
+	// Sleep to allow wireguard to start
+	time.Sleep(1 * time.Second)
+
+	// Sync wireguard configuration
+	err := SyncWireguardConfiguration()
+	if err != nil {
+		log.Fatal("Error syncing wireguard configuration:", err)
+	}
 
 	// Init long polling
 	InitLongPoll()
@@ -87,32 +111,15 @@ func LoadEnvVars() {
 
 	ENV.WG_PRIVATE_KEY = os.Getenv("WG_PRIVATE_KEY")
 	if ENV.WG_PRIVATE_KEY == "" {
-		log.Fatal("WG_PRIVATE_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
-	} else {
-		// Decode Base64
-		_, err := base64.StdEncoding.DecodeString(ENV.WG_PRIVATE_KEY)
-		if err != nil {
-			log.Fatal("Invalid WG_PRIVATE_KEY (unable to decode base64)")
-		}
+		log.Fatal("WG_PRIVATE_KEY env variable is required. Use `net-tbm generate-wg-key` to generate one")
 	}
 
-	ENV.WG_PUBLIC_KEY = os.Getenv("WG_PUBLIC_KEY")
-	if ENV.WG_PUBLIC_KEY == "" {
-		log.Fatal("WG_PUBLIC_KEY env variable is required. Use `net-tbm wg-key-pair` to generate one")
+	DB_AES_KEY := os.Getenv("DB_AES_KEY")
+	if DB_AES_KEY == "" {
+		log.Fatal("DB_AES_KEY env variable is required. Use `net-tbm generate-db-key` to generate one")
 	} else {
 		// Decode Base64
-		_, err := base64.StdEncoding.DecodeString(ENV.WG_PRIVATE_KEY)
-		if err != nil {
-			log.Fatal("Invalid PRIVATE_KEY (unable to decode base64)")
-		}
-	}
-
-	ENV.DB_AES_KEY = os.Getenv("DB_AES_KEY")
-	if ENV.DB_AES_KEY == "" {
-		log.Fatal("DB_AES_KEY env variable is required. Use `net-tbm aes-key` to generate one")
-	} else {
-		// Decode Base64
-		bytes, err := base64.StdEncoding.DecodeString(ENV.DB_AES_KEY)
+		bytes, err := base64.StdEncoding.DecodeString(DB_AES_KEY)
 		if err != nil {
 			log.Fatal("Invalid DB_AES_KEY (unable to decode base64)")
 		}
@@ -121,6 +128,9 @@ func LoadEnvVars() {
 		if len(bytes) != 32 {
 			log.Fatal("Invalid DB_AES_KEY (must be 32 bytes)")
 		}
+
+		// Set the key
+		ENV.DB_AES_KEY = bytes
 	}
 
 	ENV.SERVER_CIDR = os.Getenv("SERVER_CIDR")
@@ -141,6 +151,11 @@ func LoadEnvVars() {
 	if len(ENV.NAME_SERVERS) == 0 {
 		log.Println("NAME_SERVERS is not set. Defaulting to 8.8.8.8")
 		ENV.NAME_SERVERS = []string{"8.8.8.8"}
+	} else if len(ENV.NAME_SERVERS) == 1 {
+		if ENV.NAME_SERVERS[0] == "" {
+			log.Println("NAME_SERVERS is not set. Defaulting to 8.8.8.8")
+			ENV.NAME_SERVERS = []string{"8.8.8.8"}
+		}
 	}
 
 	ENV.INTERFACE_NAME = os.Getenv("INTERFACE_NAME")
@@ -174,7 +189,7 @@ func InitAdminAccount() {
 		log.Fatal(err)
 	}
 
-	hash, err := HashString(ENV.ADMIN_PASS, salt)
+	hash, err := GenerateDeterministicHash([]byte(ENV.ADMIN_PASS), salt)
 	if err != nil {
 		log.Fatal(err)
 	}
