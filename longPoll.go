@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lampy255/net-tbm/types"
 )
 
 type LP_Message struct {
 	Topic      string            `json:"topic"`
 	Data       string            `json:"data"`
 	Attributes map[string]string `json:"attributes"`
+	Config     types.Peer        `json:"config,omitempty"`
 }
 
 type LP_Client struct {
@@ -90,4 +92,12 @@ func SendClientMessage(uuid string, msg LP_Message) error {
 	}
 	lpClient.(*LP_Client).Ch <- msg
 	return nil
+}
+
+func PushPeerConfig(Peer types.Peer) {
+	msg := LP_Message{
+		Topic:  "config",
+		Config: Peer,
+	}
+	SendClientMessage(Peer.UUID, msg)
 }
