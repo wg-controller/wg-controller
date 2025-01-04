@@ -1,62 +1,44 @@
 <script lang="ts" setup>
 import { BytesString, timeSinceSeconds, timeSinceString } from '@/utils/utils';
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 import { useStore } from "vuex";
 import { key } from "../store";
 import { required, hostValidate, subnetsValidate, ipValidate } from '@/utils/validators';
+
+import type { Peer, PeerInit, ServerInfo } from "@/types/shared";
+import { DELETE_Peer, GET_PeerInit, GET_Peers, PUT_Peer, PATCH_Peer, GET_ServerInfo } from '@/api/methods';
 const store = useStore(key);
 
-function CopyToClipboard(text: string) {
-    navigator.clipboard.writeText(text).then(() => {
-        store.state.SnackBarText = 'Copied to clipboard'
-        store.state.SnackBarError = false
-        store.state.SnackBarShow = true
-    }, () => {
-        store.state.SnackBarText = 'Failed to copy to clipboard'
+onMounted(() => {
+    Init()
+})
+
+async function Init() {
+    try {
+        let val = await GET_Peers()
+        if (val != null) {
+            items.value = val
+        }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Error fetching clients"
         store.state.SnackBarError = true
         store.state.SnackBarShow = true
-    })
+    }
 }
 
-const items = ref([
-    { 
-        uuid: "1",
-        hostname: "Jack's MBP",
-        lastSeenUnixMillis: 1735863146168,
-        localTunAddress: "192.168.1.1",
-        enabled: true,
-        transmitBytes: 123456789,
-        receiveBytes: 98763354321,
-    },
-    { 
-        uuid: "2",
-        hostname: "HD3-DOCKER-01",
-        lastSeenUnixMillis: 1735863599253,
-        localTunAddress: "192.168.1.2",
-        enabled: true,
-        transmitBytes: 1256789,
-        receiveBytes: 984321,
-    },
-    { 
-        uuid: "3",
-        hostname: "HD4-DOCKER-01",
-        lastSeenUnixMillis: 1735863246168,
-        localTunAddress: "192.168.1.3",
-        enabled: true,
-        transmitBytes: 123456789,
-        receiveBytes: 987654321,
-    },
-])
+const items = ref<Peer[]>([])
 const headers = ref([
     { title: 'Hostname', key: 'hostname' },
     { title: 'Last Seen', key: 'lastSeenUnixMillis' },
     { title: 'TX Bytes', key: 'transmitBytes' },
     { title: 'RX Bytes', key: 'receiveBytes' },
     { title: 'Address', key: 'localTunAddress', sortable: false },
-    { title: 'Subnets', key: 'subnets', sortable: false },
+    { title: 'Subnets', key: 'remoteSubnets', sortable: false },
     { title: '', key: 'actions', align: 'end', sortable: false },
 ] as const)
+
 const search = ref('')
 
 const clientWizard = ref(false)
@@ -77,6 +59,18 @@ const clientWizardInstallCMD = function() {
 }
 const clientStartCMD = 'sudo systemctl start net-tbm-client'
 
+function CopyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+        store.state.SnackBarText = 'Copied to clipboard'
+        store.state.SnackBarError = false
+        store.state.SnackBarShow = true
+    }, () => {
+        store.state.SnackBarText = 'Failed to copy to clipboard'
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
+    })
+}
+
 function CopyWGConfig() {
     const el = document.getElementById('wgConfig')
     if (el) {
@@ -84,15 +78,26 @@ function CopyWGConfig() {
     }
 }
 
-function NextClientWizardStep() {
+async function NextClientWizardStep() {
     if (clientWizardStep.value < 3) {
         clientWizardStep.value++
     } else {
         if (clientWizardType.value === 'TBM Client') {
             clientWizard.value = false
         } else {
-            console.log('Deploying Wireguard client')
-            clientWizard.value = false
+            // Apply changes to Wireguard client
+            try {
+                await PUT_Peer(clientBuffer.value!)
+            } catch (error: any) {
+                console.error(error)
+                store.state.SnackBarText = "Error creating client"
+                store.state.SnackBarError = true
+                store.state.SnackBarShow = true
+                return
+            } finally {
+                clientWizard.value = false
+                Init()
+            }
         }
     }
 }
@@ -118,9 +123,13 @@ function NextButtonColor() {
 }
 
 function NextButtonEnabled() {
+    if (clientBuffer.value == undefined) {
+        return false
+    }
+
     // Validate input
     if (clientWizardStep.value === 2 && clientWizardType.value === 'Wireguard Client') {
-        if (hostValidate(clientBuffer.value.hostname) !== true || subnetsValidate(clientBuffer.value.subnets) !== true) {
+        if (hostValidate(clientBuffer.value.hostname) !== true || subnetsValidate(clientBuffer.value.remoteSubnets) !== true || subnetsValidate(clientBuffer.value.allowedSubnets) !== true) {
             return false
         }
     }
@@ -128,7 +137,8 @@ function NextButtonEnabled() {
 }
 
 const clientDialog = ref(false)
-const clientBuffer = ref({ hostname: '', subnets: [], tunnelAddress: '' })
+const clientBuffer = ref<Peer>()
+const serverInfo = ref<ServerInfo>()
 const wgConfigDialog = ref(false)
 
 const platforms = ref([
@@ -137,27 +147,98 @@ const platforms = ref([
     'Windows',
 ])
 
-function EditClient(client: any) {
-    clientBuffer.value = client
+function StartEditClient(client: Peer) {
+    clientBuffer.value = JSON.parse(JSON.stringify(client))
     clientDialog.value = true
 }
 
-function ExportWGConfig(client: any) {
-    clientBuffer.value = client
-    wgConfigDialog.value = true
+async function ApplyEditClient() {
+    try {
+        await PATCH_Peer(clientBuffer.value!)
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Error updating client"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
+        return
+    } finally {
+      Init()
+      clientDialog.value = false
+    }
 }
 
-function RemoveClient(client: any) {
+async function ExportWGConfig(client: Peer) {
+    try {
+      let ServerInfoVal = await GET_ServerInfo()
+      if (ServerInfoVal != null) {
+          serverInfo.value = ServerInfoVal
+      }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Internal error"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
+        return
+    } finally {
+      clientBuffer.value = client
+      wgConfigDialog.value = true
+    }
+}
+
+function RemoveClient(client: Peer) {
     store.state.ConfirmDialogTitle = 'Remove ' + client.hostname
     store.state.ConfirmDialogText = 'Are you sure you want to remove this client?'
     store.state.ConfirmDialogCallback = () => {
-        console.log('Removing client with UUID:', client.uuid)
+        try {
+            DELETE_Peer(client.uuid)
+        } catch (error: any) {
+            console.error(error)
+            store.state.SnackBarText = "Error removing client"
+            store.state.SnackBarError = true
+            store.state.SnackBarShow = true
+            return
+        } finally {
+          Init()
+        }        
     }
     store.state.ConfirmDialogShow = true
 }
 
-function NewClientWizardDialog() {
-    clientBuffer.value = { hostname: '', subnets: [] }
+async function NewClientWizardDialog() {
+    // Get initial value for a potential new client
+    let InitPeer: PeerInit
+    try {
+        InitPeer = await GET_PeerInit()
+        let ServerInfoVal = await GET_ServerInfo()
+        if (ServerInfoVal != null) {
+            serverInfo.value = ServerInfoVal
+        }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Internal error"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
+        return
+    }
+
+    clientBuffer.value = <Peer>{
+        uuid: InitPeer.uuid,
+        hostname: '',
+        enabled: true,
+        privateKey: InitPeer.privateKey,
+        publicKey: InitPeer.publicKey,
+        preSharedKey: InitPeer.preSharedKey,
+        keepAliveSeconds: 15,
+        localTunAddress: InitPeer.localTunAddress,
+        remoteTunAddress: '',
+        remoteSubnets: [],
+        allowedSubnets: ['0.0.0.0/0'],
+        lastSeenUnixMillis: 0,
+        lastIPAddress: '',
+        transmitBytes: 0,
+        receiveBytes: 0,
+        attributes: [],
+    }
     clientWizardStep.value = 1
     clientWizardType.value = 'TBM Client'
     clientWizardPlatform.value = 'Linux'
@@ -247,6 +328,14 @@ function NewClientWizardDialog() {
         {{ BytesString(item.receiveBytes) }}
       </template>
 
+      <template #[`item.remoteSubnets`]="{ item }">
+        <v-chip
+          v-for="subnet in item.remoteSubnets"
+          :key="subnet"
+          class="mr-1"
+          size="x-small">{{ subnet }}</v-chip>
+      </template>
+
       <template #[`item.actions`]="{ item }">
         <v-menu
           open-on-click
@@ -264,7 +353,7 @@ function NewClientWizardDialog() {
           <v-list density="compact">
             <v-list-item
               class="d-flex flex-row"
-              @click="EditClient(item)"
+              @click="StartEditClient(item)"
             >
               <v-list-item-title>Edit</v-list-item-title>
             </v-list-item>
@@ -330,7 +419,7 @@ function NewClientWizardDialog() {
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                A device running the TBM Client software that is managed by the TBM Server.
+                A device running the TBM Client software that will be managed by the server.
 
               </span>
             </div>
@@ -347,7 +436,7 @@ function NewClientWizardDialog() {
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                A standard Wireguard client or 3rd party device that is not managed by the TBM Server (no subnet route provisioning).
+                A standard Wireguard client or 3rd party device. Requires manual configuration.
               </span>
             </div>
           </v-card>
@@ -378,7 +467,7 @@ function NewClientWizardDialog() {
             flat
           >
             <v-text-field
-              v-model="clientBuffer.hostname"
+              v-model="clientBuffer!.hostname"
               :rules="[required, hostValidate]"
               label="Hostname"
               variant="solo"
@@ -388,17 +477,68 @@ function NewClientWizardDialog() {
               class="mx-7"
             />
 
-            <v-combobox
-              v-model="clientBuffer.subnets"
-              :rules="[subnetsValidate]"
-              multiple
-              chips
-              label="Subnet CIDRs (optional)"
-              variant="solo"
-              flat
-              bg-color="oddRow"
-              class="mx-7"
-            />
+            <v-row
+              no-gutters
+            >
+              <v-combobox
+                v-model="clientBuffer!.remoteSubnets"
+                :rules="[subnetsValidate]"
+                multiple
+                chips
+                label="Remote Subnets (optional)"
+                variant="solo"
+                flat
+                bg-color="oddRow"
+                class="mx-7"
+              />
+
+              <v-tooltip
+                text="Subnets the client will share with the server"
+                location="top"
+                transition="none"
+                close-delay="0"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    class="mt-4 mr-6"
+                    color="grey"
+                    v-bind="props"
+                  >
+                    mdi-help-circle
+                  </v-icon>
+                </template>
+              </v-tooltip>
+            </v-row>
+
+            <v-row no-gutters>
+              <v-combobox
+                v-model="clientBuffer!.allowedSubnets"
+                :rules="[subnetsValidate, required]"
+                multiple
+                chips
+                label="Allowed Subnets"
+                variant="solo"
+                flat
+                bg-color="oddRow"
+                class="mx-7"
+              />
+              <v-tooltip
+                text="Subnets the client is allowed to access via the server"
+                location="top"
+                transition="none"
+                close-delay="0"
+              >
+                <template #activator="{ props }">
+                  <v-icon
+                    class="mt-4 mr-6"
+                    color="grey"
+                    v-bind="props"
+                  >
+                    mdi-help-circle
+                  </v-icon>
+                </template>
+              </v-tooltip>
+            </v-row>
           </v-card>
         </template>
 
@@ -473,16 +613,16 @@ function NewClientWizardDialog() {
                 <code id="wgConfig">
 
 [Interface]
-PrivateKey = 12345678
-Address = 10.8.0.3/24
-DNS = 1.1.1.1
+PrivateKey = {{ clientBuffer!.privateKey }}
+Address = {{ clientBuffer!.localTunAddress }}
+DNS = {{ serverInfo!.nameServers.join(', ') }}
 
 [Peer]
-PublicKey = 1234567
-PresharedKey = 1234567
-AllowedIPs = 0.0.0.0/0, ::/0
-PersistentKeepalive = 0
-Endpoint = 3.27.229.123:51820
+PublicKey = {{ clientBuffer!.publicKey }}
+PresharedKey = {{ clientBuffer!.preSharedKey }}
+AllowedIPs = {{ clientBuffer!.allowedSubnets.join(', ') }}
+PersistentKeepalive = {{ clientBuffer!.keepAliveSeconds }}
+Endpoint = {{ serverInfo!.publicEndpoint }}
                 </code>
               </pre>
             </v-card-text>
@@ -502,11 +642,12 @@ Endpoint = 3.27.229.123:51820
 
     <v-dialog
       v-model="clientDialog"
-      width="560"
+      width="650"
     >
       <v-card>
         <v-form
           ref="entryForm"
+          @submit.prevent="ApplyEditClient()"
         >
           <v-card-title
             class="text-h6 ma-3"
@@ -515,7 +656,7 @@ Endpoint = 3.27.229.123:51820
           </v-card-title>
 
           <v-text-field
-            v-model="clientBuffer.hostname"
+            v-model="clientBuffer!.hostname"
             label="Hostname"
             :rules="[required, hostValidate]"
             variant="solo"
@@ -525,28 +666,84 @@ Endpoint = 3.27.229.123:51820
             class="mx-7"
           />
 
-          <v-combobox
-            v-model="clientBuffer.subnets"
-            :rules="[subnetsValidate]"
-            multiple
-            chips
-            label="Subnet CIDRs (optional)"
-            variant="solo"
-            flat
-            bg-color="oddRow"
-            class="mx-7"
-          />
+          <v-row
+            no-gutters
+          >
+            <v-combobox
+              v-model="clientBuffer!.remoteSubnets"
+              :rules="[subnetsValidate]"
+              multiple
+              chips
+              label="Remote Subnets (optional)"
+              variant="solo"
+              flat
+              bg-color="oddRow"
+              class="mx-7"
+            />
 
-          <v-text-field
-            v-model="clientBuffer.tunnelAddress"
-            label="Tunnel Address"
-            :rules="[required, ipValidate]"
-            variant="solo"
-            flat
-            bg-color="oddRow"
-            density="compact"
-            class="mx-7"
-          />
+            <v-tooltip
+              text="Subnets the client will share with the server"
+              location="top"
+              transition="none"
+              close-delay="0"
+            >
+              <template #activator="{ props }">
+                <v-icon
+                  class="mt-4 mr-10"
+                  color="grey"
+                  v-bind="props"
+                >
+                  mdi-help-circle
+                </v-icon>
+              </template>
+            </v-tooltip>
+          </v-row>
+
+          <v-row no-gutters>
+            <v-combobox
+              v-model="clientBuffer!.allowedSubnets"
+              :rules="[subnetsValidate, required]"
+              multiple
+              chips
+              label="Allowed Subnets"
+              variant="solo"
+              flat
+              bg-color="oddRow"
+              class="mx-7"
+            />
+            <v-tooltip
+              text="Subnets the client is allowed to access via the server"
+              location="top"
+              transition="none"
+              close-delay="0"
+            >
+              <template #activator="{ props }">
+                <v-icon
+                  class="mt-4 mr-10"
+                  color="grey"
+                  v-bind="props"
+                >
+                  mdi-help-circle
+                </v-icon>
+              </template>
+            </v-tooltip>
+          </v-row>
+
+          <div
+            class="ml-13 mr-9 mt-2 mb-2"
+          >
+            <v-icon
+              color="grey"
+              size="x-small"
+              style="margin-bottom: 2px"
+              class="ml-n5"
+            >
+              mdi-information
+            </v-icon>
+            <span class="text-grey-darken-2">
+              Standard (non-TBM) Wireguard clients require a config export before changes will take effect.
+            </span>
+          </div>
 
           <v-card-actions class="mb-3 mr-5">
             <v-spacer />
@@ -579,7 +776,7 @@ Endpoint = 3.27.229.123:51820
         <v-card-title
           class="text-h6 ma-3"
         >
-          {{ clientBuffer.hostname }}
+          {{ clientBuffer!.hostname }}
         </v-card-title>
 
         <v-card-text
@@ -597,26 +794,26 @@ Endpoint = 3.27.229.123:51820
                 <code id="wgConfig">
 
 [Interface]
-PrivateKey = 12345678
-Address = 10.8.0.3/24
-DNS = 1.1.1.1
+PrivateKey = {{ clientBuffer!.privateKey }}
+Address = {{ clientBuffer!.localTunAddress }}
+DNS = {{ serverInfo!.nameServers.join(', ') }}
 
 [Peer]
-PublicKey = 1234567
-PresharedKey = 1234567
-AllowedIPs = 0.0.0.0/0, ::/0
-PersistentKeepalive = 0
-Endpoint = 3.27.229.123:51820
+PublicKey = {{ clientBuffer!.publicKey }}
+PresharedKey = {{ clientBuffer!.preSharedKey }}
+AllowedIPs = {{ clientBuffer!.allowedSubnets.join(', ') }}
+PersistentKeepalive = {{ clientBuffer!.keepAliveSeconds}}
+Endpoint = {{ serverInfo!.publicEndpoint }}
                 </code>
               </pre>
         </v-card-text>
 
-        <v-card-actions class="mb-3 mr-5">
+        <v-card-actions class="mb-3 mr-5 mt-2">
           <v-spacer />
 
           <v-btn
             color="secondary"
-            variant="flat"
+            variant="outlined"
             @click="wgConfigDialog = false"
           >
             Close

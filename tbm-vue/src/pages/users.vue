@@ -1,21 +1,37 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 import { useStore } from "vuex";
 import { key } from "../store";
+import { DELETE_Account, DELETE_AccountFailedAttempts, GET_Accounts, PATCH_Account, PUT_Account } from '@/api/methods';
+import { VForm } from "vuetify/components";
+import type { UserAccount, UserAccountWithPass } from '@/types/shared';
+import { emailValidate, passwordValidate, required } from '@/utils/validators';
 const store = useStore(key);
 
-const items = ref([
-    { 
-        uuid: "1",
-        email: "jack.wdgt@gmail.com",
-        role: "admin",
-        failedAttempts: 0,
+onMounted(() => {
+    Init()
+})
+
+async function Init() {
+    try {
+        let val = await GET_Accounts()
+        if (val != null) {
+            items.value = val
+        }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Error fetching users"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
     }
-])
+}
+
+const items = ref<UserAccount[]>([])
 const headers = ref([
     { title: 'Email', key: 'email' },
     { title: 'Role', key: 'role' },
+    { title: 'Last Active', key: 'lastActiveUnixMillis' },
     { title: 'Failed Attempts', key: 'failedAttempts' },
     { title: 'Suspended', key: 'suspended' },
     { title: '', key: 'actions', align: 'end', sortable: false },
@@ -24,30 +40,107 @@ const search = ref('')
 
 const userDialog = ref(false)
 const userDialogEditMode = ref(false)
-const userBuffer = ref({ email: '', password: '', confirmPassword: '' })
+const userBuffer = ref<UserAccount>()
+const userPassword = ref('')
+const userConfirmPassword = ref('')
 
-function RemoveUser(user: any) {
-    store.state.ConfirmDialogTitle = 'Remove ' + user.email
+async function RemoveUser(email: string) {
+    store.state.ConfirmDialogTitle = 'Remove ' + email
     store.state.ConfirmDialogText = 'Are you sure you want to remove this user?'
-    store.state.ConfirmDialogCallback = () => {
-        console.log('Removing user with UUID:', user.uuid)
+    store.state.ConfirmDialogCallback = async () => {
+        try {
+            await DELETE_Account(email)
+        } catch (error: any) {
+            console.error(error)
+            store.state.SnackBarText = error
+            store.state.SnackBarError = true
+            store.state.SnackBarShow = true
+        } finally {
+            Init()
+        }
     }
     store.state.ConfirmDialogShow = true
 }
 
-function ResetAttempts(uuid: string) {
+async function ResetAttempts(email: string) {
     store.state.ConfirmDialogTitle = 'Reset Attempts'
     store.state.ConfirmDialogText = 'Are you sure you want to reset failed attempts for this user?'
-    store.state.ConfirmDialogCallback = () => {
-        console.log('Resetting attempts for user with UUID:', uuid)
+    store.state.ConfirmDialogCallback = async () => {
+        try {
+            await DELETE_AccountFailedAttempts(email)
+        } catch (error: any) {
+            console.error(error)
+            store.state.SnackBarText = "Error resetting attempts"
+            store.state.SnackBarError = true
+            store.state.SnackBarShow = true
+        } finally {
+            Init()
+        }
     }
     store.state.ConfirmDialogShow = true
 }
 
 function NewUserDialog() {
     userDialogEditMode.value = false
-    userBuffer.value = { email: '', password: '', confirmPassword: '' }
+    userBuffer.value = {
+        email: '',
+        role: 'user',
+        failedAttempts: 0,
+        lastActiveUnixMillis: 0,
+    }
+    userPassword.value = ''
+    userConfirmPassword.value = ''
     userDialog.value = true
+}
+
+function EditUserDialog(user: UserAccount) {
+    userDialogEditMode.value = true
+    userBuffer.value = JSON.parse(JSON.stringify(user))
+    userPassword.value = ''
+    userConfirmPassword.value = ''
+    userDialog.value = true
+}
+
+const userForm = ref<VForm>();
+async function ApplyUserDialog() {
+  if (userForm.value == null) {
+    console.error("loginForm is null");
+    return
+  }
+
+  if (userPassword.value != userConfirmPassword.value) {
+      store.state.SnackBarText = "Passwords do not match"
+      store.state.SnackBarError = true
+      store.state.SnackBarShow = true
+      return
+  }
+
+  let result = await userForm.value.validate();
+  if (result.valid) {
+    try {
+        let account: UserAccountWithPass = {
+          email: userBuffer.value!.email,
+          role: userBuffer.value!.role,
+          password: userPassword.value,
+        }
+
+        if (userDialogEditMode.value) {
+            await PATCH_Account(account)
+        } else {
+            await PUT_Account(account)
+        }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Error applying user"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
+    } finally {
+        userDialog.value = false
+        Init()
+    }
+  } else {
+    console.error("Form is not valid");
+  }
 }
 </script>
 
@@ -108,6 +201,20 @@ function NewUserDialog() {
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >
+
+      <template #[`item.lastActiveUnixMillis`]="{ item }">
+        <span v-if="item.lastActiveUnixMillis > 0">{{ new Date(item.lastActiveUnixMillis).toLocaleString() }}</span>
+        <span v-else>never</span>
+      </template> 
+
+      <template #[`item.suspended`]="{ item }">
+        <v-chip
+          v-if="item.failedAttempts >= 5"
+          color="red"
+          size="x-small"
+        >SUSPENDED</v-chip>
+      </template> 
+
       <template #[`item.actions`]="{ item }">
         <v-menu
           open-on-click
@@ -126,21 +233,21 @@ function NewUserDialog() {
           <v-list density="compact">
             <v-list-item
               class="d-flex flex-row"
-              @click="console.log(item)"
+              @click="EditUserDialog(item)"
             >
               <v-list-item-title>Edit</v-list-item-title>
             </v-list-item>
             <v-list-item
               class="d-flex flex-row"
               base-color="red"
-              @click="ResetAttempts(item.uuid)"
+              @click="ResetAttempts(item.email)"
             >
               <v-list-item-title>Reset Attempts</v-list-item-title>
             </v-list-item>
             <v-list-item
               class="d-flex flex-row"
               base-color="red"
-              @click="RemoveUser(item)"
+              @click="RemoveUser(item.email)"
             >
               <v-list-item-title>Remove</v-list-item-title>
             </v-list-item>
@@ -156,11 +263,8 @@ function NewUserDialog() {
     >
       <v-card>
         <v-form
-          ref="entryForm"
-          @submit.prevent="
-            store.state.ConfirmDialogCallback(),
-            (store.state.ConfirmDialogShow = false)
-          "
+          ref="userForm"
+          @submit.prevent="ApplyUserDialog"
         >
           <v-card-title
             v-if="userDialogEditMode"
@@ -177,33 +281,39 @@ function NewUserDialog() {
           </v-card-title>
 
           <v-text-field
-            v-model="userBuffer.email"
+            v-model="userBuffer!.email"
             label="Email"
             variant="solo"
             flat
             bg-color="oddRow"
             density="compact"
             class="mx-7"
+            :rules="[emailValidate, required]"
+            :disabled="userDialogEditMode"
           />
 
           <v-text-field
-            v-model="userBuffer.password"
+            v-model="userPassword"
             label="Password"
             variant="solo"
             flat
             bg-color="oddRow"
             density="compact"
             class="mx-7"
+            type="password"
+            :rules="[passwordValidate, required]"
           />
 
           <v-text-field
-            v-model="userBuffer.confirmPassword"
+            v-model="userConfirmPassword"
             label="Confirm Password"
             variant="solo"
             flat
             bg-color="oddRow"
             density="compact"
             class="mx-7"
+            type="password"
+            :rules="[passwordValidate, required]"
           />
 
           <v-card-actions class="mb-3 mr-5">

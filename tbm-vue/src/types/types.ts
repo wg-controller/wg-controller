@@ -6,4 +6,5 @@ export interface StoreStruct {
     SnackBarShow: boolean;
     SnackBarText: string;
     SnackBarError: boolean;
+    LoggedIn: boolean;
 };

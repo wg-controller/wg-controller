@@ -4,6 +4,7 @@
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
     "types": ["vuetify", "node"],
+    "outDir": "dist",
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "baseUrl": ".",

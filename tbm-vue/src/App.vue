@@ -10,9 +10,9 @@ const store = useStore(key);
     <v-snackbar
       v-model="store.state.SnackBarShow"
       location="bottom left"
-      :color="store.state.SnackBarError ? 'red-darken-1' : 'secondary'"
-      :timer="store.state.SnackBarError ? 'red-darken-2' : 'primary'"
-      :timeout="5000"
+      :color="store.state.SnackBarError ? 'red-darken-2' : 'primary'"
+      :timer="store.state.SnackBarError ? 'red-darken-4' : 'secondary'"
+      :timeout="7000"
       max-width="400"
       close-on-content-click
       transition="slide-x-transition"
@@ -23,6 +23,7 @@ const store = useStore(key);
       <span>{{ store.state.SnackBarText }}</span>
     </v-snackbar>
     <v-app-bar
+      v-if="store.state.LoggedIn"
       app
       density="compact"
       :elevation="0"

@@ -1,17 +1,31 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 import { useStore } from "vuex";
 import { key } from "../store";
+import { GET_APIKeys } from '@/api/methods';
+import type { APIKey } from '@/types/shared';
 const store = useStore(key);
 
-const items = ref([
-    { 
-        uuid: "1",
-        name: "OBT Servers",
-        expires: "2022-12-31",
+onMounted(() => {
+    Init()
+})
+
+async function Init() {
+    try {
+        let val = await GET_APIKeys()
+        if (val != null) {
+            items.value = val
+        }
+    } catch (error: any) {
+        console.error(error)
+        store.state.SnackBarText = "Error fetching API keys"
+        store.state.SnackBarError = true
+        store.state.SnackBarShow = true
     }
-])
+}
+
+const items = ref<APIKey[]>([])
 const headers = ref([
     { title: 'Name', key: 'name' },
     { title: 'Expires', key: 'expires' },
@@ -19,7 +33,7 @@ const headers = ref([
 ] as const)
 const search = ref('')
 
-function RemoveKey(key: any) {
+function RemoveKey(key: APIKey) {
     store.state.ConfirmDialogTitle = 'Remove ' + key.name
     store.state.ConfirmDialogText = 'Are you sure you want to remove this API key?'
     store.state.ConfirmDialogCallback = () => {

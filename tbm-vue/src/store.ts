@@ -16,6 +16,7 @@ export const store = createStore<StoreStruct>({
       SnackBarShow: false,
       SnackBarText: "",
       SnackBarError: false,
+      LoggedIn: false,
     };
   },
 });

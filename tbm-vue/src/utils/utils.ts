@@ -3,6 +3,10 @@ export function timeSinceString(unixMillis: number) {
       return "never";
     }
 
+    if (unixMillis < 0) {
+      return "never"; // Handle future dates
+    }
+
     const unixSeconds = unixMillis / 1000;
   
     const now = Math.floor(Date.now() / 1000); // Get current time in seconds
@@ -44,4 +48,12 @@ export function timeSinceString(unixMillis: number) {
 
   export function NewUUID() {
     return crypto.randomUUID();
+  }
+
+  export function ArrayToCommas(arr: string[]) {
+    return arr.join(", ");
+  }
+
+  export function CommasToArray(str: string) {
+    return str.split(", ");
   }

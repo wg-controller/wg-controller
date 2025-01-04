@@ -34,5 +34,8 @@ export function passwordValidate(value: string) {
   }
 
   export function required(value: any) {
-    return !!value || "Required.";
+    if (value === null || value === undefined || value === "" || value.length === 0) {
+      return "Required";
+    }
+    return true;
   }
