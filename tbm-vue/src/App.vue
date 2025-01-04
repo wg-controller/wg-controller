@@ -23,7 +23,7 @@ const store = useStore(key);
       <span>{{ store.state.SnackBarText }}</span>
     </v-snackbar>
     <v-app-bar
-      v-if="store.state.LoggedIn"
+      v-bind:class="{ invisible: !store.state.LoggedIn }"
       app
       density="compact"
       :elevation="0"
@@ -136,5 +136,9 @@ const store = useStore(key);
 
 .v-list {
   padding: 0px !important;
+}
+
+.invisible {
+  display: none !important;
 }
 </style>

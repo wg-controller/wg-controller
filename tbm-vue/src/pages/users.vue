@@ -14,6 +14,7 @@ onMounted(() => {
 })
 
 async function Init() {
+  loading.value = true
     try {
         let val = await GET_Accounts()
         if (val != null) {
@@ -24,6 +25,8 @@ async function Init() {
         store.state.SnackBarText = "Error fetching users"
         store.state.SnackBarError = true
         store.state.SnackBarShow = true
+    } finally {
+        loading.value = false
     }
 }
 
@@ -36,7 +39,9 @@ const headers = ref([
     { title: 'Suspended', key: 'suspended' },
     { title: '', key: 'actions', align: 'end', sortable: false },
 ] as const)
+
 const search = ref('')
+const loading = ref(true)
 
 const userDialog = ref(false)
 const userDialogEditMode = ref(false)
@@ -198,6 +203,7 @@ async function ApplyUserDialog() {
       no-data-text="No users found"
       :items-per-page="-1"
       :search="search"
+      :loading="loading"
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >

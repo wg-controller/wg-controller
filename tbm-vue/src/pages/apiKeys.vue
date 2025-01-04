@@ -12,6 +12,7 @@ onMounted(() => {
 })
 
 async function Init() {
+    loading.value = true
     try {
         let val = await GET_APIKeys()
         if (val != null) {
@@ -22,6 +23,8 @@ async function Init() {
         store.state.SnackBarText = "Error fetching API keys"
         store.state.SnackBarError = true
         store.state.SnackBarShow = true
+    } finally {
+        loading.value = false
     }
 }
 
@@ -31,7 +34,9 @@ const headers = ref([
     { title: 'Expires', key: 'expires' },
     { title: '', key: 'actions', align: 'end', sortable: false },
 ] as const)
+
 const search = ref('')
+const loading = ref(true)
 
 function RemoveKey(key: APIKey) {
     store.state.ConfirmDialogTitle = 'Remove ' + key.name
@@ -96,6 +101,7 @@ function RemoveKey(key: APIKey) {
       no-data-text="No keys found"
       :items-per-page="-1"
       :search="search"
+      :loading="loading"
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >

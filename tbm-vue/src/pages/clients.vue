@@ -15,6 +15,7 @@ onMounted(() => {
 })
 
 async function Init() {
+  loading.value = true
     try {
         let val = await GET_Peers()
         if (val != null) {
@@ -25,6 +26,8 @@ async function Init() {
         store.state.SnackBarText = "Error fetching clients"
         store.state.SnackBarError = true
         store.state.SnackBarShow = true
+    } finally {
+      loading.value = false
     }
 }
 
@@ -40,6 +43,7 @@ const headers = ref([
 ] as const)
 
 const search = ref('')
+const loading = ref(true)
 
 const clientWizard = ref(false)
 const clientWizardType = ref('TBM Client')
@@ -299,6 +303,7 @@ async function NewClientWizardDialog() {
       no-data-text="No clients found"
       :items-per-page="-1"
       :search="search"
+      :loading="loading"
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >
