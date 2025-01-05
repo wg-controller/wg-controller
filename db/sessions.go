@@ -47,6 +47,17 @@ func DeleteUserSessions(userEmail string) error {
 	return nil
 }
 
+func DeleteSession(hash []byte) error {
+	// Delete the session from the database
+	query := `DELETE FROM sessions WHERE hash = ?`
+	_, err := DB.Exec(query, hash)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func GarbageCollectSessions() {
 	// Query the database
 	query := `DELETE FROM sessions WHERE expires_unixmillis < ?`

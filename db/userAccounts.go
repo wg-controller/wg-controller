@@ -83,6 +83,22 @@ func InsertAccount(email string, role string, passwordHash []byte, passwordSalt 
 	return err
 }
 
+func UpdateAccount(account types.UserAccount) error {
+	query := `UPDATE user_accounts SET
+		role = ?,
+		failed_attempts = ?,
+		last_active_unixmillis = ?
+		WHERE email = ?`
+
+	_, err := DB.Exec(query,
+		account.Role,
+		account.FailedAttempts,
+		account.LastActiveUnixMillis,
+		account.Email,
+	)
+	return err
+}
+
 // Delete an account from the database
 func DeleteAccount(email string) error {
 	query := `DELETE FROM user_accounts WHERE email = ?`
@@ -123,15 +139,6 @@ func UpdateAccountPasswordHash(email string, hash []byte, salt []byte) error {
 func IncrementAccountFailedAttempts(email string) error {
 	query := `UPDATE user_accounts SET
 		failed_attempts = failed_attempts + 1
-		WHERE email = ?`
-
-	_, err := DB.Exec(query, email)
-	return err
-}
-
-func ResetAccountFailedAttempts(email string) error {
-	query := `UPDATE user_accounts SET
-		failed_attempts = 0
 		WHERE email = ?`
 
 	_, err := DB.Exec(query, email)
