@@ -1,8 +1,34 @@
 <script lang="ts" setup>
 import { useStore } from "vuex";
 import { key } from "./store";
+import { useRouter } from "vue-router";
+import { POST_Logout } from "./api/methods";
 
 const store = useStore(key);
+const router = useRouter();
+
+function Logout() {
+  // Send logout request
+  try {
+    POST_Logout();
+  } catch (error: any) {
+    console.error(error);
+    store.state.SnackBarText = "Error logging out";
+    store.state.SnackBarError = true;
+    store.state.SnackBarShow = true;
+    return;
+  }
+
+  // Clear state
+  store.state.LoggedIn = false;
+  store.state.UserEmail = "";
+  store.state.SnackBarText = "Logged out";
+  store.state.SnackBarError = false;
+  store.state.SnackBarShow = true;
+
+  // Redirect to login
+  router.push("/login");
+}
 </script>
 
 <template>
@@ -17,9 +43,7 @@ const store = useStore(key);
       close-on-content-click
       transition="slide-x-transition"
     >
-      <v-icon class="mr-3">
-        mdi-information
-      </v-icon>
+      <v-icon class="mr-3"> mdi-information </v-icon>
       <span>{{ store.state.SnackBarText }}</span>
     </v-snackbar>
     <v-app-bar
@@ -30,50 +54,41 @@ const store = useStore(key);
       color="secondary"
     >
       <template #[`prepend`]>
-        <v-icon
-          class="ml-3 mr-4"
-          size="x-large"
-          color="primary"
-        >
-          mdi-vpn
-        </v-icon>
+        <v-icon class="ml-3 mr-4" size="x-large" color="primary"> mdi-vpn </v-icon>
         <v-tabs slider-color="primary">
-          <v-tab to="/clients">
-            Clients
-          </v-tab>
-          <v-tab to="/apikeys">
-            API Keys
-          </v-tab>
-          <v-tab to="/users">
-            Users
-          </v-tab>
+          <v-tab to="/clients"> Clients </v-tab>
+          <v-tab to="/apikeys"> API Keys </v-tab>
+          <v-tab to="/users"> Users </v-tab>
         </v-tabs>
       </template>
 
       <template #[`append`]>
-        <v-icon
-          class="mx-3"
-          size="x-large"
-        >
-          mdi-account-circle
-        </v-icon>
+        <v-menu open-on-hover>
+          <template v-slot:activator="{ props }">
+            <span class="mr-1 ml-1">{{ store.state.UserEmail }}</span>
+            <v-btn v-bind="props" icon size="small" class="mr-1">
+              <v-icon class="mx-3" size="x-large"> mdi-account-circle </v-icon>
+            </v-btn>
+          </template>
+
+          <v-list>
+            <v-list-item class="d-flex flex-row" @click="Logout()" append-icon="mdi-logout">
+              <v-list-item-title>Logout</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
     </v-app-bar>
     <v-main>
       <router-view />
     </v-main>
 
-    <v-dialog
-      v-model="store.state.ConfirmDialogShow"
-      width="460"
-      scrim="grey-darken-1"
-    >
+    <v-dialog v-model="store.state.ConfirmDialogShow" width="460" scrim="grey-darken-1">
       <v-card>
         <v-form
           ref="entryForm"
           @submit.prevent="
-            store.state.ConfirmDialogCallback(),
-            (store.state.ConfirmDialogShow = false)
+            store.state.ConfirmDialogCallback(), (store.state.ConfirmDialogShow = false)
           "
         >
           <v-card-title class="text-h6 mb-1 ml-2 mt-4">
@@ -95,13 +110,7 @@ const store = useStore(key);
               Cancel
             </v-btn>
 
-            <v-btn
-              color="secondary"
-              type="submit"
-              variant="flat"
-            >
-              Confirm
-            </v-btn>
+            <v-btn color="secondary" type="submit" variant="flat"> Confirm </v-btn>
           </v-card-actions>
         </v-form>
       </v-card>
@@ -110,7 +119,8 @@ const store = useStore(key);
 </template>
 
 <style>
-.html, body {
+.html,
+body {
   min-width: 750px !important;
 }
 
