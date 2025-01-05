@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -55,12 +56,12 @@ func GenerateRandomBytes(n int) ([]byte, error) {
 
 func AuthMiddleware(c *gin.Context) {
 	// Check for sessionId cookie
-	bearer := ""
+	token := ""
 	session, err := c.Cookie("sessionId")
 	if err != nil {
 		// Check for Authorization header
-		bearer = c.GetHeader("Authorization")
-		if bearer == "" {
+		token = c.GetHeader("Authorization")
+		if token == "" {
 			c.AbortWithStatus(403)
 			log.Println("No Authorization header or sessionId cookie from IP:", c.ClientIP())
 			return
@@ -111,25 +112,18 @@ func AuthMiddleware(c *gin.Context) {
 	}
 
 	// If Authorization header is present, check the token
-	if bearer != "" {
-		if len(bearer) < 7 {
-			c.AbortWithStatus(403)
-			log.Println("Invalid Authorization header from IP:", c.ClientIP())
-			return
-		}
-
-		token := bearer[7:]
+	if token != "" {
 		if token == "" {
-			c.AbortWithStatus(403)
+			c.AbortWithStatus(401)
 			log.Println("Invalid Authorization header from IP:", c.ClientIP())
 			return
 		}
 
 		// Decode Base64
-		tokenBytes, err := base64.StdEncoding.DecodeString(token)
+		tokenBytes, err := base64.URLEncoding.DecodeString(token)
 		if err != nil {
 			log.Println(err)
-			c.AbortWithStatus(500)
+			c.AbortWithStatus(401)
 			return
 		}
 
@@ -142,7 +136,7 @@ func AuthMiddleware(c *gin.Context) {
 		}
 
 		// Check for the api key in the DB
-		expires, err := db.GetApiKey(hash)
+		expires, attributes, err := db.GetApiKey(hash)
 		if err != nil {
 			c.AbortWithStatus(403)
 			log.Println("Invalid token from IP:", c.ClientIP())
@@ -155,12 +149,72 @@ func AuthMiddleware(c *gin.Context) {
 			return
 		}
 
-		c.Next()
-		return
+		// Get permission string for current route
+		permission, err := PermissionString(c)
+		if err != nil {
+			c.AbortWithStatus(500)
+			log.Println(err)
+			return
+		}
+
+		// Check if the api key has the required permission
+		for i := 0; i < len(attributes); i++ {
+			if attributes[i] == permission {
+				c.Next()
+				return
+			}
+		}
+		log.Println("Insufficient permissions for token from IP:", c.ClientIP(), "required:", permission, "actual:", attributes)
+
+		// Default to 403
+		c.AbortWithStatus(403)
 	}
 
 	// Default to 403
 	c.AbortWithStatus(403)
+}
+
+func PermissionString(c *gin.Context) (permission string, err error) {
+	// Get the HTTP method
+	method := c.Request.Method
+	operation := ""
+	switch method {
+	case "GET":
+		operation = "read"
+	case "POST":
+	case "PUT":
+	case "PATCH":
+		operation = "write"
+	case "DELETE":
+		operation = "delete"
+	default:
+		return "", errors.New("invalid method")
+	}
+
+	// Split the full route
+	fullRoute := c.FullPath()
+	splitRoute := strings.Split(fullRoute, "/")
+
+	// Get index of "api"
+	index := -1
+	for i := 0; i < len(splitRoute); i++ {
+		if splitRoute[i] == "api" {
+			index = i
+			break
+		}
+	}
+
+	// Check if "api" is in the route
+	if index == -1 {
+		return "", errors.New("invalid route")
+	}
+
+	// Check if the route is too short
+	if len(splitRoute) < index+2 {
+		return "", errors.New("invalid route")
+	}
+
+	return operation + "-" + splitRoute[index+2], nil
 }
 
 func POST_PreLogin(c *gin.Context) {

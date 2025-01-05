@@ -6,21 +6,31 @@ import (
 	"github.com/lampy255/net-tbm/types"
 )
 
-func GetApiKey(hash []byte) (expiresUnixMillis int64, err error) {
+func GetApiKey(hash []byte) (expiresUnixMillis int64, attributes []string, err error) {
 	// Query the database
 	query := `SELECT
-		expires_unixmillis
+		expires_unixmillis,
+		attributes
 		FROM api_keys
 		WHERE hash = ?`
 	row := DB.QueryRow(query, hash)
 
 	// Scan the row
-	err = row.Scan(&expiresUnixMillis)
+	attributesString := ""
+	err = row.Scan(&expiresUnixMillis, &attributesString)
 	if err != nil {
-		return 0, err
+		return 0, []string{}, err
 	}
 
-	return expiresUnixMillis, nil
+	// Split the attributes
+	attributes = strings.Split(attributesString, ",")
+	if len(attributes) == 1 {
+		if attributes[0] == "" {
+			attributes = []string{}
+		}
+	}
+
+	return expiresUnixMillis, attributes, nil
 }
 
 func GetApiKeys() ([]types.APIKey, error) {

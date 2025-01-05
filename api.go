@@ -580,8 +580,16 @@ func PUT_APIKey(c *gin.Context) {
 	}
 	apiKey.UUID = uuid
 
+	// Decode token from base64
+	tokenBytes, err := base64.URLEncoding.DecodeString(apiKey.Token)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
 	// Generate hash
-	hash, err := GenerateDeterministicHash([]byte(apiKey.Token), []byte{})
+	hash, err := GenerateDeterministicHash(tokenBytes, []byte{})
 	if err != nil {
 		log.Println(err)
 		c.Status(500)
