@@ -9,6 +9,8 @@ WORKDIR /app
 
 # Copy .go files
 COPY *.go ./
+COPY db/ db/
+COPY types/ types/
 
 # Download Go modules
 COPY go.mod go.sum ./
@@ -29,9 +31,6 @@ WORKDIR /app
 
 # Copy the binary from the build stage
 COPY --from=builder /app/main .
-
-# Enable ip routing
-RUN echo 1 > /proc/sys/net/ipv4/ip_forward
 
 # Run
 CMD ["/app/main"]
