@@ -5,8 +5,8 @@ if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
 fi
 
-GHCR_USERNAME="lampy255"  # GitHub organization name
-IMAGE_NAME="wg-server"  # Name of the Docker image
+GHCR_USERNAME="wg-controller"  # GitHub organization name
+IMAGE_NAME="wg-controller"  # Name of the Docker image
 REPO="ghcr.io/$GHCR_USERNAME/$IMAGE_NAME"  # GHCR repository name
 
 # Get the current git tag
