@@ -219,6 +219,7 @@ func POST_PreLogin(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"status": "ok",
+		"email":  email,
 	})
 }
 
@@ -302,12 +303,6 @@ func POST_Login(c *gin.Context) {
 		}
 	}
 
-	// Reset the failed attempts
-	err = db.ResetAccountFailedAttempts(login.Email)
-	if err != nil {
-		log.Println(err)
-	}
-
 	// Generate a session token
 	tokenBytes, err := GenerateRandomBytes(32)
 	if err != nil {
@@ -343,6 +338,66 @@ func POST_Login(c *gin.Context) {
 
 	// Set cookie
 	c.SetCookie("sessionId", tokenBase64, 0, "", "", true, true)
+	log.Println("User logged in:", login.Email, "from IP:", c.ClientIP())
+	c.JSON(200, gin.H{
+		"status": "ok",
+		"email":  login.Email,
+	})
+}
+
+func POST_Logout(c *gin.Context) {
+	// Check for session cookie
+	session, err := c.Cookie("sessionId")
+	if err != nil {
+		c.JSON(401, gin.H{
+			"error": "not logged in",
+		})
+		return
+	}
+
+	// Decode Base64
+	sessionBytes, err := base64.URLEncoding.DecodeString(session)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "internal server error",
+		})
+		return
+	}
+
+	// Hash the session token
+	hash, err := GenerateDeterministicHash(sessionBytes, []byte{})
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "internal server error",
+		})
+		return
+	}
+
+	// Check that the session token exists
+	_, email, err := db.GetSession(hash)
+	if err != nil {
+		log.Println(err)
+		c.JSON(401, gin.H{
+			"error": "invalid session",
+		})
+		return
+	}
+
+	// Delete the session from the DB
+	err = db.DeleteSession(hash)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "internal server error",
+		})
+		return
+	}
+
+	// Delete the session cookie
+	c.SetCookie("sessionId", "", -1, "", "", true, true)
+	log.Println("User logged out:", email, "from IP:", c.ClientIP())
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})
