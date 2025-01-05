@@ -55,22 +55,22 @@ const search = ref("");
 const loading = ref(true);
 
 const clientWizard = ref(false);
-const clientWizardType = ref("TBM Client");
+const clientWizardType = ref("Managed Client");
 const clientWizardPlatform = ref("Linux");
 const clientWizardStep = ref(1);
 const clientWizardInstallCMD = function () {
   switch (clientWizardPlatform.value) {
     case "Linux":
-      return "sudo apt-get install net-tbm-client";
+      return "sudo apt-get install wg-controller-client";
     case "MacOS":
-      return "brew install net-tbm-client";
+      return "brew install wg-controller-client";
     case "Windows":
-      return "choco install net-tbm-client";
+      return "choco install wg-controller-client";
     default:
-      return "sudo apt-get install net-tbm-client";
+      return "sudo apt-get install wg-controller-client";
   }
 };
-const clientStartCMD = "sudo systemctl start net-tbm-client";
+const clientStartCMD = "sudo systemctl start wg-controller-client";
 
 function CopyToClipboard(text: string) {
   navigator.clipboard.writeText(text).then(
@@ -98,7 +98,7 @@ async function NextClientWizardStep() {
   if (clientWizardStep.value < 3) {
     clientWizardStep.value++;
   } else {
-    if (clientWizardType.value === "TBM Client") {
+    if (clientWizardType.value === "Managed Client") {
       clientWizard.value = false;
     } else {
       // Apply changes to Wireguard client
@@ -122,7 +122,7 @@ function NextButtonText() {
   if (clientWizardStep.value < 3) {
     return "Next";
   } else {
-    if (clientWizardType.value === "TBM Client") {
+    if (clientWizardType.value === "Managed Client") {
       return "Finish";
     } else {
       return "Apply";
@@ -256,7 +256,7 @@ async function NewClientWizardDialog() {
     attributes: []
   };
   clientWizardStep.value = 1;
-  clientWizardType.value = "TBM Client";
+  clientWizardType.value = "Managed Client";
   clientWizardPlatform.value = "Linux";
   clientWizard.value = true;
 }
@@ -351,15 +351,15 @@ async function NewClientWizardDialog() {
         <template #item.1>
           <v-card title="Select Client Type" flat>
             <v-radio-group v-model="clientWizardType" row class="ml-5">
-              <v-radio key="TBM Client" label="TBM Client" value="TBM Client" />
+              <v-radio key="Managed Client" label="Managed Client" value="Managed Client" />
               <v-radio key="Wireguard Client" label="Wireguard Client" value="Wireguard Client" />
             </v-radio-group>
-            <div v-if="clientWizardType === 'TBM Client'" class="mx-13">
+            <div v-if="clientWizardType === 'Managed Client'" class="mx-13">
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                A device running the TBM Client software that will be managed by the server.
+                A device running the Managed Client software that will be managed by the server.
               </span>
             </div>
             <div v-if="clientWizardType === 'Wireguard Client'" class="mx-13">
@@ -374,7 +374,7 @@ async function NewClientWizardDialog() {
         </template>
 
         <template #item.2>
-          <v-card v-if="clientWizardType === 'TBM Client'" title="Select Platform" flat>
+          <v-card v-if="clientWizardType === 'Managed Client'" title="Select Platform" flat>
             <v-radio-group v-model="clientWizardPlatform" row class="ml-5">
               <v-radio
                 v-for="platform in platforms"
@@ -448,7 +448,7 @@ async function NewClientWizardDialog() {
         </template>
 
         <template #item.3>
-          <v-card v-if="clientWizardType === 'TBM Client'" title="Steps To Deploy" flat>
+          <v-card v-if="clientWizardType === 'Managed Client'" title="Steps To Deploy" flat>
             <h4 class="mx-7 mb-1 mt-2">Install Client</h4>
             <v-code class="mx-7">
               {{ clientWizardInstallCMD() }}
@@ -474,7 +474,7 @@ async function NewClientWizardDialog() {
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                TBM Clients will automatically appear in the Clients list as they connect to the
+                Managed Clients will automatically appear in the Clients list as they connect to the
                 server.
               </span>
             </div>
@@ -590,8 +590,8 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
               mdi-information
             </v-icon>
             <span class="text-grey-darken-2">
-              Standard (non-TBM) Wireguard clients require a config export before changes will take
-              effect.
+              Standard (non managed) Wireguard clients require a config export before changes will
+              take effect.
             </span>
           </div>
 

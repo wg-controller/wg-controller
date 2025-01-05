@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/lampy255/net-tbm/db"
-	"github.com/lampy255/net-tbm/types"
+	"github.com/lampy255/wg-controller/db"
+	"github.com/lampy255/wg-controller/types"
 )
 
 func StartAPI() {

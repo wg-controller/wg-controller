@@ -27,7 +27,7 @@ func InitDB(EncryptionKey []byte) {
 	}
 
 	// Open the database
-	path := filepath.Join("data", "tbm-server.db")
+	path := filepath.Join("data", "wg-controller.db")
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err)

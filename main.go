@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/lampy255/net-tbm/db"
+	"github.com/lampy255/wg-controller/db"
 )
 
 // Version
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	// Print version
-	log.Println("Starting net-tbm:" + IMAGE_TAG)
+	log.Println("Starting wg-controller:" + IMAGE_TAG)
 
 	// Load environment variables
 	LoadEnvVars()
@@ -111,12 +111,12 @@ func LoadEnvVars() {
 
 	ENV.WG_PRIVATE_KEY = os.Getenv("WG_PRIVATE_KEY")
 	if ENV.WG_PRIVATE_KEY == "" {
-		log.Fatal("WG_PRIVATE_KEY env variable is required. Use `net-tbm generate-wg-key` to generate one")
+		log.Fatal("WG_PRIVATE_KEY env variable is required. Use `wg-controller generate-wg-key` to generate one")
 	}
 
 	DB_AES_KEY := os.Getenv("DB_AES_KEY")
 	if DB_AES_KEY == "" {
-		log.Fatal("DB_AES_KEY env variable is required. Use `net-tbm generate-db-key` to generate one")
+		log.Fatal("DB_AES_KEY env variable is required. Use `wg-controller generate-db-key` to generate one")
 	} else {
 		// Decode Base64
 		bytes, err := base64.StdEncoding.DecodeString(DB_AES_KEY)

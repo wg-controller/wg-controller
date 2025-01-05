@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lampy255/net-tbm/db"
-	"github.com/lampy255/net-tbm/types"
+	"github.com/lampy255/wg-controller/db"
+	"github.com/lampy255/wg-controller/types"
 )
 
 const MaxFailedAttempts = 5
@@ -157,9 +157,9 @@ func AuthMiddleware(c *gin.Context) {
 			return
 		}
 
-		// tbm-client is a special permission set
+		// wg-client is a special permission set
 		if permission == "read-poll" {
-			permission = "tbm-client"
+			permission = "wg-client"
 		}
 
 		// Check if the api key has the required permission

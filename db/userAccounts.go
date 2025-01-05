@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/lampy255/net-tbm/types"
+	"github.com/lampy255/wg-controller/types"
 )
 
 func GetAccounts() ([]types.UserAccount, error) {

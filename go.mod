@@ -1,4 +1,4 @@
-module github.com/lampy255/net-tbm
+module github.com/lampy255/wg-controller
 
 go 1.22.2
 

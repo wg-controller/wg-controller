@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/lampy255/net-tbm/types"
+	"github.com/lampy255/wg-controller/types"
 )
 
 func GetPeers() ([]types.Peer, error) {

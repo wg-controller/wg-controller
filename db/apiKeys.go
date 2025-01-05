@@ -3,7 +3,7 @@ package db
 import (
 	"strings"
 
-	"github.com/lampy255/net-tbm/types"
+	"github.com/lampy255/wg-controller/types"
 )
 
 func GetApiKey(hash []byte) (expiresUnixMillis int64, attributes []string, err error) {

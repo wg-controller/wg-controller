@@ -82,7 +82,7 @@ async function ApplyKeyDialog() {
   if (result.valid) {
     // Set permissions based on type
     if (!keyBufferCustomPermissions.value) {
-      keyBuffer.value!.attributes = ["tbm-client"];
+      keyBuffer.value!.attributes = ["wg-client"];
     }
 
     // Set actual expiry date
@@ -253,7 +253,7 @@ function CopyToClipboard(text: string) {
             density="compact"
             class="mx-7 mt-2"
             :items="[
-              { title: 'TBM Client', value: false },
+              { title: 'WG Client', value: false },
               { title: 'Custom', value: true }
             ]"
           />
