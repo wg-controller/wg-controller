@@ -1,6 +1,10 @@
 package db
 
-import "github.com/lampy255/net-tbm/types"
+import (
+	"strings"
+
+	"github.com/lampy255/net-tbm/types"
+)
 
 func GetApiKey(hash []byte) (expiresUnixMillis int64, err error) {
 	// Query the database
@@ -23,8 +27,9 @@ func GetApiKeys() ([]types.APIKey, error) {
 	// Query the database
 	query := `SELECT
 		uuid,
+		name,
 		expires_unixmillis,
-		name
+		attributes
 		FROM api_keys`
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -35,26 +40,46 @@ func GetApiKeys() ([]types.APIKey, error) {
 	var keys []types.APIKey
 	for rows.Next() {
 		var key types.APIKey
+		var attributes string
 		err = rows.Scan(
 			&key.UUID,
-			&key.ExpiresUnixMillis,
 			&key.Name,
+			&key.ExpiresUnixMillis,
+			&attributes,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Split the attributes
+		key.Attributes = strings.Split(attributes, ",")
+		if len(key.Attributes) == 1 {
+			if key.Attributes[0] == "" {
+				key.Attributes = []string{}
+			}
+		}
+
 		keys = append(keys, key)
 	}
 
 	return keys, nil
 }
 
-func InsertApiKey(key types.APIKey) error {
+func InsertApiKey(key types.APIKey, hash []byte) error {
 	// Insert the session into the database
 	query := `INSERT INTO api_keys
-		(uuid, hash, expires_unixmillis, name)
-		VALUES (?, ?, ?, ?)`
-	_, err := DB.Exec(query, key.UUID, key.Hash, key.ExpiresUnixMillis, key.Name)
+		(uuid, name, expires_unixmillis, attributes, hash)
+		VALUES (?, ?, ?, ?, ?)`
+	_, err := DB.Exec(query, key.UUID, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), hash)
+	return err
+}
+
+func UpdateApiKey(key types.APIKey) error {
+	// Update the api key in the database
+	query := `UPDATE api_keys
+		SET name = ?, expires_unixmillis = ?, attributes = ?
+		WHERE uuid = ?`
+	_, err := DB.Exec(query, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), key.UUID)
 	return err
 }
 

@@ -81,10 +81,10 @@ func InitDB(EncryptionKey []byte) {
 	// Create the api_keys table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS api_keys (
 		uuid TEXT PRIMARY KEY,
-		hash BLOB,
+		name TEXT,
 		expires_unixmillis INTEGER,
-		role TEXT,
-		name TEXT
+		attributes TEXT,
+		hash BLOB
 	)`)
 	if err != nil {
 		log.Fatal(err)
