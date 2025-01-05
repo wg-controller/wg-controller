@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { onMounted } from "vue";
 import { useStore } from "vuex";
 import { key } from "../store";

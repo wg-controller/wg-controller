@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import { ref } from "vue";
 import { emailValidate, passwordValidate } from "@/utils/validators";
 import { VForm } from "vuetify/components";

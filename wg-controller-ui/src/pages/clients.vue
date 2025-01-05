@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { BytesString, timeSinceSeconds, timeSinceString } from "@/utils/utils";
 import { ref, onMounted } from "vue";
-
+import { VForm } from "vuetify/components";
 import { useStore } from "vuex";
 import { key } from "../store";
 import { required, hostValidate, subnetsValidate } from "@/utils/validators";
