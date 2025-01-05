@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ func StartAPI() {
 	public.GET("/health", GET_Health)
 	public.POST("/prelogin", POST_PreLogin)
 	public.POST("/login", POST_Login)
+	public.POST("/logout", POST_Logout)
 
 	// Private Endpoints
 	private.GET("/peers", GET_Peers)
@@ -39,12 +41,14 @@ func StartAPI() {
 	private.GET("/accounts", GET_Accounts)
 	private.PUT("/accounts/:email", PUT_Account)
 	private.PATCH("/accounts/:email", PATCH_Account)
+	private.PATCH("/accounts/:email/password", PATCH_AccountPassword)
 	private.DELETE("/accounts/:email", DELETE_Account)
-	private.DELETE("/accounts/:email/failedattempts", DELETE_AccountFailedAttempts)
 
 	private.GET("/apikeys", GET_APIKeys)
 	private.PUT("/apikeys/:uuid", PUT_APIKey)
+	private.PATCH("/apikeys/:uuid", PATCH_APIKey)
 	private.DELETE("/apikeys/:uuid", DELETE_APIKey)
+	private.GET("/apikeyinit", GET_InitAPIKey)
 
 	private.GET("/serverinfo", GET_ServerInfo)
 
@@ -417,7 +421,7 @@ func PATCH_Account(c *gin.Context) {
 	}
 
 	// Parse the account request body
-	var account types.UserAccountWithPass
+	var account types.UserAccount
 	err := c.BindJSON(&account)
 	if err != nil {
 		log.Println(err)
@@ -427,6 +431,41 @@ func PATCH_Account(c *gin.Context) {
 		return
 	}
 	account.Email = email
+
+	// Update account
+	err = db.UpdateAccount(account)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"status": "ok",
+	})
+}
+
+func PATCH_AccountPassword(c *gin.Context) {
+	email := c.Param("email")
+	if email == "" {
+		c.JSON(400, gin.H{
+			"error": "email is required",
+		})
+		return
+	}
+
+	// Parse the password request body
+	var password types.Password
+	err := c.BindJSON(&password)
+	if err != nil {
+		log.Println(err)
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	// Create salt
 	salt, err := NewSalt()
@@ -439,7 +478,7 @@ func PATCH_Account(c *gin.Context) {
 	}
 
 	// Hash password
-	hash, err := GenerateDeterministicHash([]byte(account.Password), salt)
+	hash, err := GenerateDeterministicHash([]byte(password.Password), salt)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -507,30 +546,6 @@ func DELETE_Account(c *gin.Context) {
 	})
 }
 
-func DELETE_AccountFailedAttempts(c *gin.Context) {
-	email := c.Param("email")
-	if email == "" {
-		c.JSON(400, gin.H{
-			"error": "email is required",
-		})
-		return
-	}
-
-	// Reset failed attempts
-	err := db.ResetAccountFailedAttempts(email)
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(200, gin.H{
-		"status": "ok",
-	})
-}
-
 func GET_APIKeys(c *gin.Context) {
 	apiKeys, err := db.GetApiKeys()
 	if err != nil {
@@ -554,6 +569,57 @@ func PUT_APIKey(c *gin.Context) {
 	}
 
 	// Parse the api key request body
+	var apiKey types.APIKeyWithToken
+	err := c.BindJSON(&apiKey)
+	if err != nil {
+		log.Println(err)
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	apiKey.UUID = uuid
+
+	// Generate hash
+	hash, err := GenerateDeterministicHash([]byte(apiKey.Token), []byte{})
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
+	apiKeyWithoutToken := types.APIKey{
+		UUID:              apiKey.UUID,
+		Name:              apiKey.Name,
+		ExpiresUnixMillis: apiKey.ExpiresUnixMillis,
+		Attributes:        apiKey.Attributes,
+	}
+
+	// Insert api key
+	err = db.InsertApiKey(apiKeyWithoutToken, hash)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"status": "ok",
+	})
+}
+
+func PATCH_APIKey(c *gin.Context) {
+	uuid := c.Param("uuid")
+	if uuid == "" {
+		c.JSON(400, gin.H{
+			"error": "uuid is required",
+		})
+		return
+	}
+
+	// Parse the api key request body
 	var apiKey types.APIKey
 	err := c.BindJSON(&apiKey)
 	if err != nil {
@@ -565,8 +631,8 @@ func PUT_APIKey(c *gin.Context) {
 	}
 	apiKey.UUID = uuid
 
-	// Insert api key
-	err = db.InsertApiKey(apiKey)
+	// Update api key
+	err = db.UpdateApiKey(apiKey)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -601,6 +667,26 @@ func DELETE_APIKey(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})
+}
+
+func GET_InitAPIKey(c *gin.Context) {
+	InitAPIKey := types.APIKeyInit{}
+
+	// Generate UUID
+	InitAPIKey.UUID = uuid.New().String()
+
+	// Generate random token
+	tokenBytes, err := GenerateRandomBytes(32)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
+	// Encode token bytes to base64
+	InitAPIKey.Token = base64.URLEncoding.EncodeToString(tokenBytes)
+
+	c.JSON(200, InitAPIKey)
 }
 
 func GET_ServerInfo(c *gin.Context) {
