@@ -157,6 +157,11 @@ func AuthMiddleware(c *gin.Context) {
 			return
 		}
 
+		// tbm-client is a special permission set
+		if permission == "read-poll" {
+			permission = "tbm-client"
+		}
+
 		// Check if the api key has the required permission
 		for i := 0; i < len(attributes); i++ {
 			if attributes[i] == permission {
