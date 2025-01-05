@@ -17,6 +17,8 @@ export const store = createStore<StoreStruct>({
       SnackBarText: "",
       SnackBarError: false,
       LoggedIn: false,
+      Loaded: false,
+      UserEmail: ""
     };
-  },
+  }
 });
