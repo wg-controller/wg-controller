@@ -36,9 +36,10 @@ type UserAccount struct {
 }
 
 type UserAccountWithPass struct {
-	Email    string `json:"email"`
-	Role     string `json:"role"` // "user", "admin"
-	Password string `json:"password"`
+	Email          string `json:"email"`
+	Role           string `json:"role"` // "user", "admin"
+	FailedAttempts int    `json:"failedAttempts"`
+	Password       string `json:"password"`
 }
 
 type LoginBody struct {
@@ -47,14 +48,30 @@ type LoginBody struct {
 }
 
 type APIKey struct {
-	UUID              string `json:"uuid"`
-	Hash              string `json:"hash"`
-	ExpiresUnixMillis int64  `json:"expiresUnixMillis"`
-	Role              string `json:"role"` // Future use
-	Name              string `json:"name"`
+	UUID              string   `json:"uuid"`
+	Name              string   `json:"name"`
+	ExpiresUnixMillis int64    `json:"expiresUnixMillis"`
+	Attributes        []string `json:"attributes"`
+}
+
+type APIKeyWithToken struct {
+	UUID              string   `json:"uuid"`
+	Name              string   `json:"name"`
+	ExpiresUnixMillis int64    `json:"expiresUnixMillis"`
+	Attributes        []string `json:"attributes"`
+	Token             string   `json:"token"`
+}
+
+type APIKeyInit struct {
+	UUID  string `json:"uuid"`
+	Token string `json:"token"`
 }
 
 type ServerInfo struct {
 	PublicEndpoint string   `json:"publicEndpoint"`
 	NameServers    []string `json:"nameServers"`
+}
+
+type Password struct {
+	Password string `json:"password"`
 }

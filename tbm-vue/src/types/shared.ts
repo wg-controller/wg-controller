@@ -38,6 +38,7 @@ export interface UserAccount {
 export interface UserAccountWithPass {
   email: string;
   role: string; // "user", "admin"
+  failedAttempts: number /* int */;
   password: string;
 }
 export interface LoginBody {
@@ -46,12 +47,25 @@ export interface LoginBody {
 }
 export interface APIKey {
   uuid: string;
-  hash: string;
-  expiresUnixMillis: number /* int64 */;
-  role: string; // Future use
   name: string;
+  expiresUnixMillis: number /* int64 */;
+  attributes: string[];
+}
+export interface APIKeyWithToken {
+  uuid: string;
+  name: string;
+  expiresUnixMillis: number /* int64 */;
+  attributes: string[];
+  token: string;
+}
+export interface APIKeyInit {
+  uuid: string;
+  token: string;
 }
 export interface ServerInfo {
   publicEndpoint: string;
   nameServers: string[];
+}
+export interface Password {
+  password: string;
 }

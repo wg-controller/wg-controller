@@ -1,10 +1,12 @@
 export interface StoreStruct {
-    ConfirmDialogShow: boolean;
-    ConfirmDialogTitle: string;
-    ConfirmDialogText: string;
-    ConfirmDialogCallback: () => void;
-    SnackBarShow: boolean;
-    SnackBarText: string;
-    SnackBarError: boolean;
-    LoggedIn: boolean;
-};
+  ConfirmDialogShow: boolean;
+  ConfirmDialogTitle: string;
+  ConfirmDialogText: string;
+  ConfirmDialogCallback: () => void;
+  SnackBarShow: boolean;
+  SnackBarText: string;
+  SnackBarError: boolean;
+  LoggedIn: boolean;
+  Loaded: boolean;
+  UserEmail: string;
+}
