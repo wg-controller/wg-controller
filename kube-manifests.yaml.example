@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: wg-controller
+  name: wg-controller
+  namespace: default
+spec:
+  replicas: 1
+  serviceName: wg-controller
+  selector:
+    matchLabels:
+      app: wg-controller
+  template:
+    metadata:
+      labels:
+        app: wg-controller
+    spec:
+      containers:
+        - name: wg-controller
+          image: ghcr.io/lampy255/wg-controller:latest
+          ports:
+            - containerPort: 8081 # API
+              protocol: TCP
+            - containerPort: 51820 # WireGuard
+              hostPort: 51820
+              protocol: UDP
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PUBLIC_HOST
+              value: "wg.example.com"
+            - name: ADMIN_EMAIL
+              value: "admin@example.com"
+            - name: ADMIN_PASS
+              value: "example"
+            - name: WG_PRVATE_KEY
+              value: "example"
+            - name: DB_AES_KEY
+              value: "example"
+          volumeMounts:
+            - mountPath: /app/data
+              name: wg-controller-data
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "1"
+      restartPolicy: Always
+      volumes:
+        - name: wg-controller-data
+          persistentVolumeClaim:
+            claimName: wg-controller-data
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: wg-controller-data
+  name: wg-controller-data
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wg-controller
+  namespace: default
+spec:
+  ports:
+    - name: https
+      protocol: TCP
+      port: 8081
+      targetPort: 8081
+  selector:
+    app: wg-controller
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: wg-controller-ui
+  name: wg-controller-ui
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wg-controller-ui
+  template:
+    metadata:
+      labels:
+        app: wg-controller-ui
+    spec:
+      containers:
+        - name: wg-controller-ui
+          image: ghcr.io/lampy255/wg-controller-ui:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            limits:
+              memory: "500Mi"
+              cpu: "1"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wg-controller-ui
+  namespace: default
+spec:
+  ports:
+    - name: https
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: wg-controller-ui
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wg-controller-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  defaultBackend:
+    service:
+      name: wg-controller-ui
+      port:
+        number: 8080
+  tls:
+    - hosts:
+        - wg.example.com
+      secretName: wg.example.com
+  rules:
+    - host: "wg.example.com"
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: wg-controller
+                port:
+                  number: 8081
