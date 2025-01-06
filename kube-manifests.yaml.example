@@ -16,6 +16,12 @@ spec:
       labels:
         app: wg-controller
     spec:
+      securityContext:
+        sysctls:
+          - name: net.ipv4.conf.all.src_valid_mark
+            value: "1"
+          - name: net.ipv4.ip_forward
+            value: "1"
       containers:
         - name: wg-controller
           image: ghcr.io/wg-controller/wg-controller:latest
@@ -25,25 +31,32 @@ spec:
             - containerPort: 51820 # WireGuard
               hostPort: 51820
               protocol: UDP
-          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            capabilities:
+              add:
+                - NET_ADMIN
+                - SYS_MODULE
+            privileged: true
+          imagePullPolicy: Always
           env:
             - name: PUBLIC_HOST
-              value: "wg.example.com"
+              value: "wg.example.co.nz"
             - name: ADMIN_EMAIL
               value: "admin@example.com"
             - name: ADMIN_PASS
-              value: "example"
-            - name: WG_PRVATE_KEY
-              value: "example"
+              value: "A secure password"
+            - name: WG_PRIVATE_KEY
+              value: "Generate a key using wg-controller CLI"
             - name: DB_AES_KEY
-              value: "example"
+              value: "Generate a key using wg-controller CLI"
           volumeMounts:
-            - mountPath: /app/data
+            - mountPath: /data
               name: wg-controller-data
           resources:
             limits:
               memory: "500Mi"
-              cpu: "1"
+              cpu: "0.5"
       restartPolicy: Always
       volumes:
         - name: wg-controller-data
@@ -109,6 +122,8 @@ spec:
             limits:
               memory: "500Mi"
               cpu: "1"
+      imagePullSecrets:
+        - name: ghcr-secret
 
 ---
 apiVersion: v1
@@ -134,6 +149,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 10m
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/issuer: "example-acme-issuer"
 spec:
   ingressClassName: nginx
   defaultBackend:
@@ -143,10 +159,10 @@ spec:
         number: 8080
   tls:
     - hosts:
-        - wg.example.com
-      secretName: wg.example.com
+        - wg.example.co.nz
+      secretName: wg.example.co.nz
   rules:
-    - host: "wg.example.com"
+    - host: "wg.example.co.nz"
       http:
         paths:
           - path: /api/v1
