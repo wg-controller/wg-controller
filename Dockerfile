@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 
 FROM golang:latest AS builder
-
 ARG IMAGE_TAG
 
 # Set destination for COPY
@@ -16,21 +15,27 @@ COPY types/ types/
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Set env vars
+ENV CGO_ENABLED=1
+ENV GOOS=linux
+
 # Build
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags "-X 'main.IMAGE_TAG=$IMAGE_TAG'" -o /app/main .
+RUN go build -ldflags "-X 'main.IMAGE_TAG=$IMAGE_TAG' -linkmode external -extldflags '-static'" -o /app/main .
 
-# Stage 2
-FROM alpine:latest
 
-# Install nano
-RUN apk update
-RUN apk add nano
+# Final stage
+FROM alpine:3.14.2
 
-# Set the working directory
-WORKDIR /app
+# Install networking packages
+RUN apk add --no-cache \
+    dpkg \
+    dumb-init \
+    iptables \
+    iptables-legacy \
+    wireguard-tools
 
-# Copy the binary from the build stage
-COPY --from=builder /app/main .
+# Copy binaries from build stage
+COPY --from=builder /app/main /app/main
 
 # Run
 CMD ["/app/main"]

@@ -41,14 +41,14 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString(privateKey)
+			os.Stdout.WriteString(privateKey + "\n")
 			os.Exit(0)
 		case "generate-db-key":
 			key, err := GenerateRandomString(32)
 			if err != nil {
 				log.Fatal(err)
 			}
-			os.Stdout.WriteString(key)
+			os.Stdout.WriteString(key + "\n")
 			os.Exit(0)
 		default:
 			fmt.Println("Available commands:")
@@ -61,6 +61,8 @@ func main() {
 	// Print version
 	log.Println("Starting wg-controller:" + IMAGE_TAG)
 
+	time.Sleep(500 * time.Second) // Temporary sleep to allow for debugging
+
 	// Load environment variables
 	LoadEnvVars()
 
@@ -69,10 +71,6 @@ func main() {
 
 	// Initialize the admin account
 	InitAdminAccount()
-
-	// Start wireguard-go
-	StartWireguard()
-	defer StopWireguard()
 
 	// Sleep to allow wireguard to start
 	time.Sleep(1 * time.Second)

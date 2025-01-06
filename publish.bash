@@ -24,6 +24,6 @@ echo "Using image tag: $IMAGE_TAG"
 echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USERNAME --password-stdin
 
 # Build the Docker image
-docker buildx build --platform linux/amd64 --build-arg GHCR_TOKEN=$GHCR_TOKEN --build-arg IMAGE_TAG=$IMAGE_TAG --build-arg IMAGE_NAME=$IMAGE_NAME -t $REPO:$IMAGE_TAG -t $REPO:latest . --push
+docker buildx build --platform linux/amd64 --platform linux/arm64 --build-arg GHCR_TOKEN=$GHCR_TOKEN --build-arg IMAGE_TAG=$IMAGE_TAG --build-arg IMAGE_NAME=$IMAGE_NAME -t $REPO:$IMAGE_TAG -t $REPO:latest . --push
 
 echo "Publish Script Complete"

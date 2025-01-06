@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: wg-controller
-          image: ghcr.io/lampy255/wg-controller:latest
+          image: ghcr.io/wg-controller/wg-controller:latest
           ports:
             - containerPort: 8081 # API
               protocol: TCP
@@ -100,7 +100,7 @@ spec:
     spec:
       containers:
         - name: wg-controller-ui
-          image: ghcr.io/lampy255/wg-controller-ui:latest
+          image: ghcr.io/wg-controller/wg-controller-ui:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

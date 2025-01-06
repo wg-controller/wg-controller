@@ -63,7 +63,7 @@ func StartAPI() {
 }
 
 func GET_Health(c *gin.Context) {
-	_, err := GetWireguard()
+	_, err := wg.Device(ENV.INTERFACE_NAME)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{

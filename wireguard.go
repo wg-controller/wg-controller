@@ -2,10 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"net"
-	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -16,51 +13,24 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-var wireguard_cmd *exec.Cmd
 var wg *wgctrl.Client
 
-// Gets wireguard-go version information
-func GetWireguard() (version string, err error) {
-	cmd := exec.Command("wireguard-go", "--version")
-	out, err := cmd.CombinedOutput()
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(out), nil
-}
-
-// Starts wireguard-go with a goroutine attached
-func StartWireguard() {
-	cmd := exec.Command("wireguard-go", "-f", ENV.INTERFACE_NAME)
-	wireguard_cmd = cmd
-
-	go func() {
-		log.Println("Starting wireguard-go")
-		op, err := cmd.Output()
-		if err != nil {
-			fmt.Println(string(op))
-			os.Exit(1)
-		}
-	}()
-
-	// Init wg-ctrl
+func InitWireguardInterface() error {
+	// Create wireguard client
 	client, err := wgctrl.New()
 	if err != nil {
-		log.Fatal("Unable to connect to wireguard-go")
+		return err
 	}
 	wg = client
-}
 
-// Kills wireguard-go
-func StopWireguard() {
-	if wireguard_cmd != nil {
-		err := wireguard_cmd.Process.Kill()
-		if err != nil {
-			log.Fatal("Error stopping wireguard-go:", err)
-		}
+	// Create wireguard interface
+	cmd := exec.Command("wg-quick", "up", ENV.INTERFACE_NAME)
+	err = cmd.Run()
+	if err != nil {
+		return err
 	}
+
+	return nil
 }
 
 func SyncWireguardConfiguration() error {
