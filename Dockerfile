@@ -19,23 +19,26 @@ RUN go mod download
 ENV CGO_ENABLED=1
 ENV GOOS=linux
 
-# Build
+# Build wg-controller
 RUN go build -ldflags "-X 'main.IMAGE_TAG=$IMAGE_TAG' -linkmode external -extldflags '-static'" -o /app/main .
 
+# Download wireguard-go
+RUN git clone https://git.zx2c4.com/wireguard-go
+WORKDIR /app/wireguard-go
+RUN go build -o /app/wireguard-go/wireguard-go .
 
 # Final stage
 FROM alpine:3.14.2
 
-# Install networking packages
-RUN apk add --no-cache \
-    dpkg \
-    dumb-init \
-    iptables \
-    iptables-legacy \
-    wireguard-tools
+# Install required packages
+RUN apk add --no-cache bash libmnl iptables openresolv iproute2 libc6-compat
 
 # Copy binaries from build stage
 COPY --from=builder /app/main /app/main
+COPY --from=builder /app/wireguard-go/wireguard-go /usr/bin/wireguard-go
+
+# Packages to help with debugging
+RUN apk add --no-cache -U wireguard-tools
 
 # Run
 CMD ["/app/main"]
