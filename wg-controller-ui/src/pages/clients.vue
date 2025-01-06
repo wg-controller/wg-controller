@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { BytesString, timeSinceSeconds, timeSinceString } from "@/utils/utils";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { VForm } from "vuetify/components";
 import { useStore } from "vuex";
 import { key } from "../store";
-import { required, hostValidate, subnetsValidate } from "@/utils/validators";
+import { required, hostValidate, subnetsValidate, ipValidate } from "@/utils/validators";
 
 import type { Peer, PeerInit, ServerInfo } from "@/types/shared";
 import {
@@ -17,12 +17,25 @@ import {
 } from "@/api/methods";
 const store = useStore(key);
 
+const fetchInterval = ref<ReturnType<typeof setInterval>>();
+
 onMounted(() => {
-  Init();
+  Init(true);
+  fetchInterval.value = setInterval(() => {
+    Init(false);
+  }, 10000);
 });
 
-async function Init() {
-  loading.value = true;
+onBeforeUnmount(() => {
+  if (fetchInterval.value) {
+    clearInterval(fetchInterval.value);
+  }
+});
+
+async function Init(showLoading: boolean) {
+  if (showLoading) {
+    loading.value = true;
+  }
   try {
     const val = await GET_Peers();
     if (val != null) {
@@ -46,8 +59,9 @@ const headers = ref([
   { title: "Last Seen", key: "lastSeenUnixMillis" },
   { title: "TX Bytes", key: "transmitBytes" },
   { title: "RX Bytes", key: "receiveBytes" },
-  { title: "Address", key: "localTunAddress", sortable: false },
-  { title: "Subnets", key: "remoteSubnets", sortable: false },
+  { title: "Remote Address", key: "remoteTunAddress", sortable: false },
+  { title: "Remote Subnets", key: "remoteSubnets", sortable: false },
+  { title: "Enabled", key: "enabled" },
   { title: "", key: "actions", align: "end", sortable: false }
 ] as const);
 
@@ -94,6 +108,19 @@ function CopyWGConfig() {
   }
 }
 
+function DownloadWGConfig() {
+  const el = document.getElementById("wgConfig");
+  if (el) {
+    const blob = new Blob([el.innerText], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = clientBuffer.value!.hostname + ".conf";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+}
+
 async function NextClientWizardStep() {
   if (clientWizardStep.value < 3) {
     clientWizardStep.value++;
@@ -112,7 +139,7 @@ async function NextClientWizardStep() {
         return;
       } finally {
         clientWizard.value = false;
-        Init();
+        Init(true);
       }
     }
   }
@@ -178,8 +205,23 @@ async function ApplyEditClient() {
     store.state.SnackBarShow = true;
     return;
   } finally {
-    Init();
+    Init(true);
     clientDialog.value = false;
+  }
+}
+
+async function ToggleClientEnabled(client: Peer) {
+  try {
+    client.enabled = !client.enabled;
+    await PATCH_Peer(client);
+  } catch (error: any) {
+    console.error(error);
+    store.state.SnackBarText = error;
+    store.state.SnackBarError = true;
+    store.state.SnackBarShow = true;
+    return;
+  } finally {
+    Init(true);
   }
 }
 
@@ -214,7 +256,7 @@ function RemoveClient(client: Peer) {
       store.state.SnackBarShow = true;
       return;
     } finally {
-      Init();
+      Init(true);
     }
   };
   store.state.ConfirmDialogShow = true;
@@ -245,9 +287,9 @@ async function NewClientWizardDialog() {
     publicKey: InitPeer.publicKey,
     preSharedKey: InitPeer.preSharedKey,
     keepAliveSeconds: 15,
-    localTunAddress: InitPeer.localTunAddress,
-    remoteTunAddress: "",
-    remoteSubnets: [],
+    localTunAddress: "",
+    remoteTunAddress: InitPeer.remoteTunAddress,
+    remoteSubnets: [InitPeer.remoteTunAddress + serverInfo.value!.netmask],
     allowedSubnets: ["0.0.0.0/0"],
     lastSeenUnixMillis: 0,
     lastIPAddress: "",
@@ -263,7 +305,7 @@ async function NewClientWizardDialog() {
 </script>
 
 <template>
-  <v-container fluid max-width="1300">
+  <v-container fluid max-width="1400">
     <v-row no-gutters class="d-flex align-center">
       <span class="text-h4">Clients</span>
       <v-icon size="x-large" color="rgb(186,194,202)" class="ml-3"> mdi-server-network </v-icon>
@@ -305,7 +347,10 @@ async function NewClientWizardDialog() {
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >
       <template #[`item.lastSeenUnixMillis`]="{ item }">
-        <div class="indicator" :class="{ green: timeSinceSeconds(item.lastSeenUnixMillis) < 60 }" />
+        <div
+          class="indicator"
+          :class="{ green: timeSinceSeconds(item.lastSeenUnixMillis) < 120 }"
+        />
         {{ timeSinceString(item.lastSeenUnixMillis) }}
       </template>
 
@@ -321,6 +366,18 @@ async function NewClientWizardDialog() {
         <v-chip v-for="subnet in item.remoteSubnets" :key="subnet" class="mr-1" size="x-small">
           {{ subnet }}
         </v-chip>
+      </template>
+
+      <template #[`item.enabled`]="{ item }">
+        <v-switch
+          v-model="item.enabled"
+          flat
+          color="primary"
+          density="compact"
+          hide-details
+          class="ml-2"
+          @click="ToggleClientEnabled(item)"
+        ></v-switch>
       </template>
 
       <template #[`item.actions`]="{ item }">
@@ -358,16 +415,14 @@ async function NewClientWizardDialog() {
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">
                 mdi-information
               </v-icon>
-              <span class="text-grey-darken-2">
-                A device running the Managed Client software that will be managed by the server.
-              </span>
+              <span class="text-grey-darken-2"> A device running the client software. </span>
             </div>
             <div v-if="clientWizardType === 'Wireguard Client'" class="mx-13">
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                A standard Wireguard client or 3rd party device. Requires manual configuration.
+                A standard wireguard client or 3rd party device. Requires manual configuration.
               </span>
             </div>
           </v-card>
@@ -396,13 +451,24 @@ async function NewClientWizardDialog() {
               class="mx-7"
             />
 
+            <v-text-field
+              v-model="clientBuffer!.remoteTunAddress"
+              label="Remote Tun Address"
+              :rules="[required, ipValidate]"
+              variant="solo"
+              flat
+              bg-color="oddRow"
+              density="compact"
+              class="mx-7"
+            />
+
             <v-row no-gutters>
               <v-combobox
                 v-model="clientBuffer!.remoteSubnets"
-                :rules="[subnetsValidate]"
+                :rules="[subnetsValidate, required]"
                 multiple
                 chips
-                label="Remote Subnets (optional)"
+                label="Remote Subnets"
                 variant="solo"
                 flat
                 bg-color="oddRow"
@@ -410,7 +476,7 @@ async function NewClientWizardDialog() {
               />
 
               <v-tooltip
-                text="Subnets the client will share with the server"
+                text="Subnets on the client side that are available to the server"
                 location="top"
                 transition="none"
                 close-delay="0"
@@ -493,7 +559,7 @@ async function NewClientWizardDialog() {
                 <code id="wgConfig">
 [Interface]
 PrivateKey = {{ clientBuffer!.privateKey }}
-Address = {{ clientBuffer!.localTunAddress + serverInfo!.netmask }}
+Address = {{ clientBuffer!.remoteTunAddress + serverInfo!.netmask }}
 DNS = {{ serverInfo!.nameServers.join(', ') }}
 
 [Peer]
@@ -535,13 +601,24 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
             class="mx-7"
           />
 
+          <v-text-field
+            v-model="clientBuffer!.remoteTunAddress"
+            label="Remote Tun Address"
+            :rules="[required, ipValidate]"
+            variant="solo"
+            flat
+            bg-color="oddRow"
+            density="compact"
+            class="mx-7"
+          />
+
           <v-row no-gutters>
             <v-combobox
               v-model="clientBuffer!.remoteSubnets"
-              :rules="[subnetsValidate]"
+              :rules="[subnetsValidate, required]"
               multiple
               chips
-              label="Remote Subnets (optional)"
+              label="Remote Subnets"
               variant="solo"
               flat
               bg-color="oddRow"
@@ -549,7 +626,7 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
             />
 
             <v-tooltip
-              text="Subnets the client will share with the server"
+              text="Subnets on the client side that are available to the server"
               location="top"
               transition="none"
               close-delay="0"
@@ -589,8 +666,8 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
               mdi-information
             </v-icon>
             <span class="text-grey-darken-2">
-              Standard (non managed) Wireguard clients require a config export before changes will
-              take effect.
+              Standard wireguard clients require a config export before some changes will take
+              effect.
             </span>
           </div>
 
@@ -625,7 +702,7 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
                 <code id="wgConfig">
 [Interface]
 PrivateKey = {{ clientBuffer!.privateKey }}
-Address = {{ clientBuffer!.localTunAddress + serverInfo!.netmask }}
+Address = {{ clientBuffer!.remoteTunAddress + serverInfo!.netmask }}
 DNS = {{ serverInfo!.nameServers.join(', ') }}
 
 [Peer]
@@ -644,6 +721,8 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
           <v-btn color="secondary" variant="outlined" @click="wgConfigDialog = false">
             Close
           </v-btn>
+
+          <v-btn color="secondary" variant="flat" @click="DownloadWGConfig()"> Download </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
