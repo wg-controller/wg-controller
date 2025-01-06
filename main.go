@@ -18,16 +18,17 @@ var IMAGE_TAG string
 
 // Global Vars
 type Env struct {
-	PUBLIC_HOST    string   // Public host for web interface
-	ADMIN_EMAIL    string   // Admin email
-	ADMIN_PASS     string   // Admin password
-	WG_PRIVATE_KEY string   // Private key for wireguard
-	DB_AES_KEY     []byte   // Base64 encoded 32 Byte AES key for encrypting private keys
-	SERVER_CIDR    string   // CIDR Network for tunnel addresses (optional)
-	NAME_SERVERS   []string // List of public DNS servers to use (optional)
-	INTERFACE_NAME string   // Override kernel interface name (optional)
-	WG_PORT        string   // Port for wireguard to listen on (optional)
-	API_PORT       string   // Port for API to listen on (optional)
+	PUBLIC_HOST      string   // Public host for web interface
+	ADMIN_EMAIL      string   // Admin email
+	ADMIN_PASS       string   // Admin password
+	WG_PRIVATE_KEY   string   // Private key for wireguard
+	DB_AES_KEY       []byte   // Base64 encoded 32 Byte AES key for encrypting private keys
+	SERVER_CIDR      string   // CIDR Network for tunnel addresses (optional)
+	NAME_SERVERS     []string // List of public DNS servers to use (optional)
+	EGRESS_INTERFACE string   // Server egress interface to masquerade traffic (optional)
+	WG_INTERFACE     string   // Wireguard interface name (optional)
+	WG_PORT          string   // Port for wireguard to listen on (optional)
+	API_PORT         string   // Port for API to listen on (optional)
 }
 
 var ENV Env
@@ -61,10 +62,12 @@ func main() {
 	// Print version
 	log.Println("Starting wg-controller:" + IMAGE_TAG)
 
-	time.Sleep(500 * time.Second) // Temporary sleep to allow for debugging
-
 	// Load environment variables
 	LoadEnvVars()
+
+	// Start wireguard
+	StartWireguard()
+	defer StopWireguard()
 
 	// Initialize the database
 	db.InitDB([]byte(ENV.DB_AES_KEY))
@@ -80,6 +83,12 @@ func main() {
 	if err != nil {
 		log.Fatal("Error syncing wireguard configuration:", err)
 	}
+
+	// Init the wireguard kernel interface
+	SetWireguardInterface()
+
+	// Init networking
+	InitNetworking()
 
 	// Init long polling
 	InitLongPoll()
@@ -133,8 +142,8 @@ func LoadEnvVars() {
 
 	ENV.SERVER_CIDR = os.Getenv("SERVER_CIDR")
 	if ENV.SERVER_CIDR == "" {
-		log.Println("SERVER_CIDR is not set. Defaulting to 172.16.0.0/16")
-		ENV.SERVER_CIDR = "172.16.0.0/16"
+		log.Println("SERVER_CIDR is not set. Defaulting to 172.16.0.0/24")
+		ENV.SERVER_CIDR = "172.16.0.0/24"
 	} else {
 		ip, _, err := net.ParseCIDR(ENV.SERVER_CIDR)
 		if err != nil {
@@ -156,9 +165,16 @@ func LoadEnvVars() {
 		}
 	}
 
-	ENV.INTERFACE_NAME = os.Getenv("INTERFACE_NAME")
-	if ENV.INTERFACE_NAME == "" {
-		ENV.INTERFACE_NAME = "wg0"
+	ENV.EGRESS_INTERFACE = os.Getenv("EGRESS_INTERFACE")
+	if ENV.EGRESS_INTERFACE == "" {
+		log.Println("EGRESS_INTERFACE is not set. Defaulting to eth0")
+		ENV.EGRESS_INTERFACE = "eth0"
+	}
+
+	ENV.WG_INTERFACE = os.Getenv("WG_INTERFACE")
+	if ENV.WG_INTERFACE == "" {
+		log.Println("WG_INTERFACE is not set. Defaulting to wg0")
+		ENV.WG_INTERFACE = "wg0"
 	}
 
 	ENV.WG_PORT = os.Getenv("WG_PORT")

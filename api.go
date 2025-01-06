@@ -63,7 +63,7 @@ func StartAPI() {
 }
 
 func GET_Health(c *gin.Context) {
-	_, err := wg.Device(ENV.INTERFACE_NAME)
+	_, err := wg.Device(ENV.WG_INTERFACE)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -153,39 +153,6 @@ func PUT_Peer(c *gin.Context) {
 		})
 		return
 	}
-
-	// Generate pre-shared key
-	preSharedKey, err := NewWireguardPreSharedKey()
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	peer.PreSharedKey = preSharedKey
-
-	// Generate private key
-	privKey, err := NewWireguardPrivateKey()
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	peer.PrivateKey = privKey
-
-	// Generate public key
-	pubKey, err := GetWireguardPublicKey(privKey)
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	peer.PublicKey = pubKey
 
 	// Insert peer into database
 	err = db.InsertPeer(peer)
@@ -299,7 +266,7 @@ func GET_InitPeer(c *gin.Context) {
 	InitPeer.PrivateKey = privKey
 
 	// Generate public key
-	pubKey, err := GetWireguardPublicKey(ENV.WG_PRIVATE_KEY)
+	pubKey, err := GetWireguardPublicKey(privKey)
 	if err != nil {
 		log.Println(err)
 		c.Status(500)
@@ -698,9 +665,27 @@ func GET_InitAPIKey(c *gin.Context) {
 }
 
 func GET_ServerInfo(c *gin.Context) {
+	// Generate public key
+	pubKey, err := GetWireguardPublicKey(ENV.WG_PRIVATE_KEY)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
+	// Get server netmask
+	mask, err := GetMask(ENV.SERVER_CIDR)
+	if err != nil {
+		log.Println(err)
+		c.Status(500)
+		return
+	}
+
 	serverInfo := types.ServerInfo{
+		PublicKey:      pubKey,
 		PublicEndpoint: ENV.PUBLIC_HOST + ":" + ENV.WG_PORT,
 		NameServers:    ENV.NAME_SERVERS,
+		Netmask:        mask,
 	}
 
 	c.JSON(200, serverInfo)

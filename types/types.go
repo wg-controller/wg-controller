@@ -68,8 +68,10 @@ type APIKeyInit struct {
 }
 
 type ServerInfo struct {
+	PublicKey      string   `json:"publicKey"`
 	PublicEndpoint string   `json:"publicEndpoint"`
 	NameServers    []string `json:"nameServers"`
+	Netmask        string   `json:"netmask"`
 }
 
 type Password struct {

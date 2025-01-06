@@ -2,7 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -13,24 +16,39 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
+var wireguard_cmd *exec.Cmd
 var wg *wgctrl.Client
 
-func InitWireguardInterface() error {
+// Starts wireguard-go with a goroutine attached
+func StartWireguard() {
+	cmd := exec.Command("wireguard-go", "-f", ENV.WG_INTERFACE)
+	wireguard_cmd = cmd
+
+	go func() {
+		log.Println("Starting wireguard-go")
+		op, err := cmd.Output()
+		if err != nil {
+			fmt.Println(string(op))
+			os.Exit(1)
+		}
+	}()
+
 	// Create wireguard client
 	client, err := wgctrl.New()
 	if err != nil {
-		return err
+		log.Fatal("Unable to connect to wireguard-go")
 	}
 	wg = client
+}
 
-	// Create wireguard interface
-	cmd := exec.Command("wg-quick", "up", ENV.INTERFACE_NAME)
-	err = cmd.Run()
-	if err != nil {
-		return err
+// Kills wireguard-go
+func StopWireguard() {
+	if wireguard_cmd != nil {
+		err := wireguard_cmd.Process.Kill()
+		if err != nil {
+			log.Fatal("Error stopping wireguard-go:", err)
+		}
 	}
-
-	return nil
 }
 
 func SyncWireguardConfiguration() error {
@@ -91,7 +109,7 @@ func SyncWireguardConfiguration() error {
 	}
 
 	// Overwrite the wireguard-go configuration
-	return wg.ConfigureDevice(ENV.INTERFACE_NAME, wgtypes.Config{
+	return wg.ConfigureDevice(ENV.WG_INTERFACE, wgtypes.Config{
 		ReplacePeers: true,
 		Peers:        wgPeers,
 		PrivateKey:   &privateKey,
@@ -101,7 +119,7 @@ func SyncWireguardConfiguration() error {
 
 func GetWireguardPeer(storedPeer types.Peer) (types.Peer, error) {
 	// Get wireguard data
-	device, err := wg.Device(ENV.INTERFACE_NAME)
+	device, err := wg.Device(ENV.WG_INTERFACE)
 	if err != nil {
 		return types.Peer{}, err
 	}
@@ -120,7 +138,7 @@ func GetWireguardPeer(storedPeer types.Peer) (types.Peer, error) {
 		}
 	}
 
-	return types.Peer{}, errors.New("peer not found")
+	return types.Peer{}, errors.New("peer not found in wireguard-go")
 }
 
 func NewWireguardPrivateKey() (privKey string, err error) {
