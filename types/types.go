@@ -8,8 +8,8 @@ type Peer struct {
 	PublicKey          string   `json:"publicKey"`        // Wireguard public key
 	PreSharedKey       string   `json:"preSharedKey"`     // Wireguard pre-shared key (stored encrypted with AES256)
 	KeepAliveSeconds   int      `json:"keepAliveSeconds"` // Wireguard keep-alive interval in seconds
-	LocalTunAddress    string   `json:"localTunAddress"`  // The IP address of the client's tunnel interface
-	RemoteTunAddress   string   `json:"remoteTunAddress"` // The IP address of the server's tunnel interface (future use)
+	LocalTunAddress    string   `json:"localTunAddress"`  // The IP address of the server's tunnel interface (future use)
+	RemoteTunAddress   string   `json:"remoteTunAddress"` // The IP address of the peer's tunnel interface
 	RemoteSubnets      []string `json:"remoteSubnets"`    // A list of CIDR subnets that the peer can provide access to
 	AllowedSubnets     []string `json:"allowedSubnets"`   // A list of CIDR subnets that the peer is allowed to access
 	LastSeenUnixMillis int64    `json:"lastSeenUnixMillis"`

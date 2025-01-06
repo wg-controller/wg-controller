@@ -11,8 +11,8 @@ export interface Peer {
   publicKey: string; // Wireguard public key
   preSharedKey: string; // Wireguard pre-shared key (stored encrypted with AES256)
   keepAliveSeconds: number /* int */; // Wireguard keep-alive interval in seconds
-  localTunAddress: string; // The IP address of the client's tunnel interface
-  remoteTunAddress: string; // The IP address of the server's tunnel interface (future use)
+  localTunAddress: string; // The IP address of the server's tunnel interface (future use)
+  remoteTunAddress: string; // The IP address of the peer's tunnel interface
   remoteSubnets: string[]; // A list of CIDR subnets that the peer can provide access to
   allowedSubnets: string[]; // A list of CIDR subnets that the peer is allowed to access
   lastSeenUnixMillis: number /* int64 */;
