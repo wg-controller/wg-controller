@@ -294,7 +294,7 @@ func GET_InitPeer(c *gin.Context) {
 	// Extract used addresses
 	var usedAddresses []string
 	for _, peer := range peers {
-		usedAddresses = append(usedAddresses, peer.LocalTunAddress)
+		usedAddresses = append(usedAddresses, peer.RemoteTunAddress)
 	}
 
 	// Generate a unique address
