@@ -63,8 +63,10 @@ export interface APIKeyInit {
   token: string;
 }
 export interface ServerInfo {
+  publicKey: string;
   publicEndpoint: string;
   nameServers: string[];
+  netmask: string;
 }
 export interface Password {
   password: string;

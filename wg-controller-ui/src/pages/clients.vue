@@ -491,14 +491,13 @@ async function NewClientWizardDialog() {
               </v-icon>
               <pre>
                 <code id="wgConfig">
-
 [Interface]
 PrivateKey = {{ clientBuffer!.privateKey }}
-Address = {{ clientBuffer!.localTunAddress }}
+Address = {{ clientBuffer!.localTunAddress + serverInfo!.netmask }}
 DNS = {{ serverInfo!.nameServers.join(', ') }}
 
 [Peer]
-PublicKey = {{ clientBuffer!.publicKey }}
+PublicKey = {{ serverInfo!.publicKey }}
 PresharedKey = {{ clientBuffer!.preSharedKey }}
 AllowedIPs = {{ clientBuffer!.allowedSubnets.join(', ') }}
 PersistentKeepalive = {{ clientBuffer!.keepAliveSeconds }}
