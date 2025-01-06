@@ -159,7 +159,7 @@ async function ApplyUserDialog() {
 </script>
 
 <template>
-  <v-container fluid max-width="1300">
+  <v-container fluid max-width="1400">
     <v-row no-gutters class="d-flex align-center">
       <span class="text-h4">Users</span>
       <v-icon size="x-large" color="rgb(186,194,202)" class="ml-3"> mdi-account-multiple </v-icon>
