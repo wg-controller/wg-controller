@@ -304,7 +304,7 @@ func GET_InitPeer(c *gin.Context) {
 		c.Status(500)
 		return
 	}
-	InitPeer.LocalTunAddress = address
+	InitPeer.RemoteTunAddress = address
 
 	c.JSON(200, InitPeer)
 }

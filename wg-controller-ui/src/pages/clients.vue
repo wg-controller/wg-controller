@@ -145,7 +145,7 @@ function DownloadQR() {
   // Create a temporary link element
   const a = document.createElement("a");
   // Use the `src` of the image as the `href`
-  a.href = imgEl.src;
+  a.href = (imgEl as HTMLImageElement).src;
   // Provide a default download filename
   a.download = clientBuffer.value!.hostname + ".png";
   // Simulate the click
