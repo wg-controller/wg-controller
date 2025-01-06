@@ -5,6 +5,7 @@ import { VForm } from "vuetify/components";
 import { useStore } from "vuex";
 import { key } from "../store";
 import { required, hostValidate, subnetsValidate, ipValidate } from "@/utils/validators";
+import VueQrcode from "vue-qrcode";
 
 import type { Peer, PeerInit, ServerInfo } from "@/types/shared";
 import {
@@ -101,6 +102,22 @@ function CopyToClipboard(text: string) {
   );
 }
 
+function GenerateWGConfig(): string {
+  return `
+[Interface]
+PrivateKey = ${clientBuffer.value!.privateKey}
+Address = ${clientBuffer.value!.remoteTunAddress + serverInfo.value!.netmask}
+DNS = ${serverInfo.value!.nameServers.join(", ")}
+
+[Peer]
+PublicKey = ${serverInfo.value!.publicKey}
+PresharedKey = ${clientBuffer.value!.preSharedKey}
+AllowedIPs = ${clientBuffer.value!.allowedSubnets.join(", ")}
+PersistentKeepalive = ${clientBuffer.value!.keepAliveSeconds}
+Endpoint = ${serverInfo.value!.publicEndpoint}
+`;
+}
+
 function CopyWGConfig() {
   const el = document.getElementById("wgConfig");
   if (el) {
@@ -119,6 +136,20 @@ function DownloadWGConfig() {
     a.click();
     window.URL.revokeObjectURL(url);
   }
+}
+
+function DownloadQR() {
+  const imgEl = document.getElementById("qrCode");
+  if (!imgEl) return;
+
+  // Create a temporary link element
+  const a = document.createElement("a");
+  // Use the `src` of the image as the `href`
+  a.href = imgEl.src;
+  // Provide a default download filename
+  a.download = clientBuffer.value!.hostname + ".png";
+  // Simulate the click
+  a.click();
 }
 
 async function NextClientWizardStep() {
@@ -187,6 +218,7 @@ const clientDialog = ref(false);
 const clientBuffer = ref<Peer>();
 const serverInfo = ref<ServerInfo>();
 const wgConfigDialog = ref(false);
+const wgConfigQRDialog = ref(false);
 
 const platforms = ref(["Linux", "MacOS", "Windows"]);
 
@@ -225,7 +257,7 @@ async function ToggleClientEnabled(client: Peer) {
   }
 }
 
-async function ExportWGConfig(client: Peer) {
+async function ExportWGConfig(client: Peer, qrCode: boolean) {
   try {
     const ServerInfoVal = await GET_ServerInfo();
     if (ServerInfoVal != null) {
@@ -239,7 +271,11 @@ async function ExportWGConfig(client: Peer) {
     return;
   } finally {
     clientBuffer.value = client;
-    wgConfigDialog.value = true;
+    if (qrCode) {
+      wgConfigQRDialog.value = true;
+    } else {
+      wgConfigDialog.value = true;
+    }
   }
 }
 
@@ -391,8 +427,12 @@ async function NewClientWizardDialog() {
               <v-list-item-title>Edit</v-list-item-title>
             </v-list-item>
 
-            <v-list-item class="d-flex flex-row" @click="ExportWGConfig(item)">
+            <v-list-item class="d-flex flex-row" @click="ExportWGConfig(item, false)">
               <v-list-item-title>Export WG Config</v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="d-flex flex-row" @click="ExportWGConfig(item, true)">
+              <v-list-item-title>Export WG QR-Code</v-list-item-title>
             </v-list-item>
 
             <v-list-item class="d-flex flex-row" base-color="red" @click="RemoveClient(item)">
@@ -557,17 +597,7 @@ async function NewClientWizardDialog() {
               </v-icon>
               <pre>
                 <code id="wgConfig">
-[Interface]
-PrivateKey = {{ clientBuffer!.privateKey }}
-Address = {{ clientBuffer!.remoteTunAddress + serverInfo!.netmask }}
-DNS = {{ serverInfo!.nameServers.join(', ') }}
-
-[Peer]
-PublicKey = {{ serverInfo!.publicKey }}
-PresharedKey = {{ clientBuffer!.preSharedKey }}
-AllowedIPs = {{ clientBuffer!.allowedSubnets.join(', ') }}
-PersistentKeepalive = {{ clientBuffer!.keepAliveSeconds }}
-Endpoint = {{ serverInfo!.publicEndpoint }}
+{{ GenerateWGConfig() }}
                 </code>
               </pre>
             </v-card-text>
@@ -700,17 +730,7 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
           </v-icon>
           <pre>
                 <code id="wgConfig">
-[Interface]
-PrivateKey = {{ clientBuffer!.privateKey }}
-Address = {{ clientBuffer!.remoteTunAddress + serverInfo!.netmask }}
-DNS = {{ serverInfo!.nameServers.join(', ') }}
-
-[Peer]
-PublicKey = {{ serverInfo!.publicKey }}
-PresharedKey = {{ clientBuffer!.preSharedKey }}
-AllowedIPs = {{ clientBuffer!.allowedSubnets.join(', ') }}
-PersistentKeepalive = {{ clientBuffer!.keepAliveSeconds }}
-Endpoint = {{ serverInfo!.publicEndpoint }}
+{{ GenerateWGConfig() }}
                 </code>
               </pre>
         </v-card-text>
@@ -723,6 +743,38 @@ Endpoint = {{ serverInfo!.publicEndpoint }}
           </v-btn>
 
           <v-btn color="secondary" variant="flat" @click="DownloadWGConfig()"> Download </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="wgConfigQRDialog" width="600">
+      <v-card>
+        <v-card-title class="text-h6 ma-3">
+          {{ clientBuffer!.hostname }}
+        </v-card-title>
+
+        <v-card-text class="d-flex align-center justify-center" style="height: 290px">
+          <vueQrcode
+            id="qrCode"
+            class="ma-3"
+            :color="{
+              dark: '#ebebeb',
+              light: '#333333'
+            }"
+            type="image/png"
+            :margin="1"
+            :value="GenerateWGConfig()"
+          />
+        </v-card-text>
+
+        <v-card-actions class="mb-3 mr-5 mt-2">
+          <v-spacer />
+
+          <v-btn color="secondary" variant="outlined" @click="wgConfigQRDialog = false">
+            Close
+          </v-btn>
+
+          <v-btn color="secondary" variant="flat" @click="DownloadQR()"> Download </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
