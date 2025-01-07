@@ -25,6 +25,8 @@ RUN go build -ldflags "-X 'main.IMAGE_TAG=$IMAGE_TAG' -linkmode external -extldf
 # Download wireguard-go
 RUN git clone https://git.zx2c4.com/wireguard-go
 WORKDIR /app/wireguard-go
+
+# Build wireguard-go
 RUN go build -o /app/wireguard-go/wireguard-go .
 
 # Final stage
@@ -37,8 +39,11 @@ RUN apk add --no-cache bash libmnl iptables openresolv iproute2 libc6-compat
 COPY --from=builder /app/main /app/main
 COPY --from=builder /app/wireguard-go/wireguard-go /usr/bin/wireguard-go
 
+# Install dnsmasq
+RUN apk add --no-cache dnsmasq
+
 # Packages to help with debugging
-RUN apk add --no-cache -U wireguard-tools
+#RUN apk add --no-cache -U wireguard-tools
 
 # Run
 CMD ["/app/main"]

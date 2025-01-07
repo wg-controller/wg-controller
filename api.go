@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -89,15 +90,16 @@ func GET_Peers(c *gin.Context) {
 
 	var extendedPeers []types.Peer
 	for _, peer := range peers {
-		extendedPeer, err := GetWireguardPeer(peer)
-		if err != nil {
-			log.Println(err)
-			c.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
+		if peer.Enabled {
+			extendedPeer, err := GetWireguardPeer(peer)
+			if err != nil {
+				log.Println(err)
+				continue // Skip this peer
+			}
+			extendedPeers = append(extendedPeers, extendedPeer)
+		} else {
+			extendedPeers = append(extendedPeers, peer)
 		}
-		extendedPeers = append(extendedPeers, extendedPeer)
 	}
 
 	c.JSON(200, extendedPeers)
@@ -121,16 +123,18 @@ func GET_Peer(c *gin.Context) {
 		return
 	}
 
-	extendedPeer, err := GetWireguardPeer(peer)
-	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
-		})
-		return
+	if peer.Enabled {
+		peer, err = GetWireguardPeer(peer)
+		if err != nil {
+			log.Println(err)
+			c.JSON(500, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
 	}
 
-	c.JSON(200, extendedPeer)
+	c.JSON(200, peer)
 }
 
 func PUT_Peer(c *gin.Context) {
@@ -166,6 +170,12 @@ func PUT_Peer(c *gin.Context) {
 
 	// Resync wireguard configuration
 	err = SyncWireguardConfiguration()
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Resync peers DNS entries
+	err = SyncPeersDNS(true)
 	if err != nil {
 		log.Println(err)
 	}
@@ -213,6 +223,12 @@ func PATCH_Peer(c *gin.Context) {
 		log.Println(err)
 	}
 
+	// Resync peers DNS entries
+	err = SyncPeersDNS(true)
+	if err != nil {
+		log.Println(err)
+	}
+
 	// Push config to peer
 	PushPeerConfig(peer)
 
@@ -230,7 +246,17 @@ func DELETE_Peer(c *gin.Context) {
 		return
 	}
 
-	err := db.DeletePeer(uuid)
+	// Get peer
+	peer, err := db.GetPeer(uuid)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	err = db.DeletePeer(uuid)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -241,6 +267,12 @@ func DELETE_Peer(c *gin.Context) {
 
 	// Resync wireguard configuration
 	err = SyncWireguardConfiguration()
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Delete host DNS entry
+	err = SyncDNSEntry(peer.Hostname, "", true)
 	if err != nil {
 		log.Println(err)
 	}
@@ -684,7 +716,7 @@ func GET_ServerInfo(c *gin.Context) {
 	serverInfo := types.ServerInfo{
 		PublicKey:      pubKey,
 		PublicEndpoint: ENV.PUBLIC_HOST + ":" + ENV.WG_PORT,
-		NameServers:    ENV.NAME_SERVERS,
+		NameServers:    []string{strings.Split(ENV.SERVER_ADDRESS, "/")[0]},
 		Netmask:        mask,
 	}
 

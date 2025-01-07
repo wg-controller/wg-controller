@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -18,17 +17,18 @@ var IMAGE_TAG string
 
 // Global Vars
 type Env struct {
-	PUBLIC_HOST      string   // Public host for web interface
-	ADMIN_EMAIL      string   // Admin email
-	ADMIN_PASS       string   // Admin password
-	WG_PRIVATE_KEY   string   // Private key for wireguard
-	DB_AES_KEY       []byte   // Base64 encoded 32 Byte AES key for encrypting private keys
-	SERVER_CIDR      string   // CIDR Network for tunnel addresses (optional)
-	NAME_SERVERS     []string // List of public DNS servers to use (optional)
-	EGRESS_INTERFACE string   // Server egress interface to masquerade traffic (optional)
-	WG_INTERFACE     string   // Wireguard interface name (optional)
-	WG_PORT          string   // Port for wireguard to listen on (optional)
-	API_PORT         string   // Port for API to listen on (optional)
+	PUBLIC_HOST      string // Public host for web interface
+	ADMIN_EMAIL      string // Admin email
+	ADMIN_PASS       string // Admin password
+	WG_PRIVATE_KEY   string // Private key for wireguard
+	DB_AES_KEY       []byte // Base64 encoded 32 Byte AES key for encrypting private keys
+	SERVER_CIDR      string // CIDR Network for tunnel addresses (optional)
+	SERVER_ADDRESS   string // Internal IP address of the server
+	EGRESS_INTERFACE string // Server egress interface to masquerade traffic (optional)
+	WG_INTERFACE     string // Wireguard interface name (optional)
+	WG_PORT          string // Port for wireguard to listen on (optional)
+	API_PORT         string // Port for API to listen on (optional)
+	SERVER_HOSTNAME  string // Internal hostname of the server (optional)
 }
 
 var ENV Env
@@ -89,6 +89,9 @@ func main() {
 
 	// Init networking
 	InitNetworking()
+
+	// Init DNS
+	InitDNS()
 
 	// Init long polling
 	InitLongPoll()
@@ -154,14 +157,18 @@ func LoadEnvVars() {
 		}
 	}
 
-	ENV.NAME_SERVERS = strings.Split(os.Getenv("NAME_SERVERS"), ",")
-	if len(ENV.NAME_SERVERS) == 0 {
-		log.Println("NAME_SERVERS is not set. Defaulting to 8.8.8.8")
-		ENV.NAME_SERVERS = []string{"8.8.8.8"}
-	} else if len(ENV.NAME_SERVERS) == 1 {
-		if ENV.NAME_SERVERS[0] == "" {
-			log.Println("NAME_SERVERS is not set. Defaulting to 8.8.8.8")
-			ENV.NAME_SERVERS = []string{"8.8.8.8"}
+	ENV.SERVER_ADDRESS = os.Getenv("SERVER_ADDRESS")
+	if ENV.SERVER_ADDRESS == "" {
+		log.Println("SERVER_ADDRESS is not set. Defaulting to CIDR max address")
+		addr, mask, err := HighestIP(ENV.SERVER_CIDR)
+		ENV.SERVER_ADDRESS = addr + mask
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ip := net.ParseIP(ENV.SERVER_ADDRESS)
+		if ip == nil {
+			log.Fatal("Invalid SERVER_ADDRESS")
 		}
 	}
 
@@ -187,6 +194,12 @@ func LoadEnvVars() {
 	if ENV.API_PORT == "" {
 		log.Println("API_PORT is not set. Defaulting to 8081")
 		ENV.API_PORT = "8081"
+	}
+
+	ENV.SERVER_HOSTNAME = os.Getenv("SERVER_HOSTNAME")
+	if ENV.SERVER_HOSTNAME == "" {
+		log.Println("SERVER_HOSTNAME is not set. Defaulting to wg-controller")
+		ENV.SERVER_HOSTNAME = "wg-controller"
 	}
 }
 

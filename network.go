@@ -134,15 +134,9 @@ func GetMask(networkCIDR string) (string, error) {
 }
 
 func SetWireguardInterface() {
-	// Get the highest IP address in the server's CIDR range
-	highestIP, mask, err := HighestIP(ENV.SERVER_CIDR)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Set the interface IP address
-	cmd1 := exec.Command("ip", "address", "add", highestIP+mask, "dev", ENV.WG_INTERFACE)
-	err = cmd1.Run()
+	cmd1 := exec.Command("ip", "address", "add", ENV.SERVER_ADDRESS, "dev", ENV.WG_INTERFACE)
+	err := cmd1.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
