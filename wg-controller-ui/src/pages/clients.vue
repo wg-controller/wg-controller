@@ -325,7 +325,7 @@ async function NewClientWizardDialog() {
     keepAliveSeconds: 15,
     localTunAddress: "",
     remoteTunAddress: InitPeer.remoteTunAddress,
-    remoteSubnets: [InitPeer.remoteTunAddress + serverInfo.value!.netmask],
+    remoteSubnets: [InitPeer.remoteTunAddress + "/32"],
     allowedSubnets: ["0.0.0.0/0"],
     lastSeenUnixMillis: 0,
     lastIPAddress: "",
