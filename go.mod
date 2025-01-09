@@ -1,4 +1,4 @@
-module github.com/lampy255/wg-controller
+module github.com/wg-controller/wg-controller
 
 go 1.22.2
 

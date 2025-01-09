@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/lampy255/wg-controller/types"
+	"github.com/wg-controller/wg-controller/types"
 )
 
 func GetAccounts() ([]types.UserAccount, error) {

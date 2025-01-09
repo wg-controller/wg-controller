@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/lampy255/wg-controller/db"
+	"github.com/wg-controller/wg-controller/db"
 )
 
 func InitDNS() {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lampy255/wg-controller/types"
+	"github.com/wg-controller/wg-controller/types"
 )
 
 type LP_Message struct {

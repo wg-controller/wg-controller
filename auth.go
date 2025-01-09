@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lampy255/wg-controller/db"
-	"github.com/lampy255/wg-controller/types"
+	"github.com/wg-controller/wg-controller/db"
+	"github.com/wg-controller/wg-controller/types"
 )
 
 const MaxFailedAttempts = 5

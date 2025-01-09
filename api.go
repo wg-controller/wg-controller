@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/lampy255/wg-controller/db"
-	"github.com/lampy255/wg-controller/types"
+	"github.com/wg-controller/wg-controller/db"
+	"github.com/wg-controller/wg-controller/types"
 )
 
 func StartAPI() {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/lampy255/wg-controller/db"
+	"github.com/wg-controller/wg-controller/db"
 )
 
 // Version

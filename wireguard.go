@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lampy255/wg-controller/db"
-	"github.com/lampy255/wg-controller/types"
+	"github.com/wg-controller/wg-controller/db"
+	"github.com/wg-controller/wg-controller/types"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
