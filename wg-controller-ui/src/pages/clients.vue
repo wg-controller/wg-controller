@@ -385,7 +385,7 @@ async function NewClientWizardDialog() {
       <template #[`item.lastSeenUnixMillis`]="{ item }">
         <div
           class="indicator"
-          :class="{ green: timeSinceSeconds(item.lastSeenUnixMillis) < 120 }"
+          :class="{ green: timeSinceString(item.lastSeenUnixMillis) == 'just now' }"
         />
         {{ timeSinceString(item.lastSeenUnixMillis) }}
       </template>

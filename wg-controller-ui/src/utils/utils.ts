@@ -24,7 +24,7 @@ export function timeSinceString(unixMillis: number) {
     return days + " days ago";
   } else if (hours > 0) {
     return hours + " hours ago";
-  } else if (minutes >= 2) {
+  } else if (minutes >= 3) {
     return minutes + " minutes ago";
   } else {
     return "just now";
