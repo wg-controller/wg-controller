@@ -275,8 +275,8 @@ func DELETE_Peer(c *gin.Context) {
 		})
 	}
 
-	// Delete host DNS entry
-	err = SyncDNSEntry(peer.Hostname, "", true)
+	// Resync peers DNS entries
+	err = SyncPeersDNS(true)
 	if err != nil {
 		log.Println(err)
 	}

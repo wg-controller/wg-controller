@@ -70,14 +70,20 @@ func SyncPeersDNS(restart bool) error {
 
 	// Write the server's IP address to the dnsmasq configuration
 	serverAddress := strings.Split(ENV.SERVER_ADDRESS, "/")[0]
-	err = SyncDNSEntry(ENV.SERVER_HOSTNAME, serverAddress, false)
+	err = AppendHostname(ENV.SERVER_HOSTNAME, serverAddress)
+	if err != nil {
+		return err
+	}
+
+	// Write the upstream DNS server to the dnsmasq configuration
+	err = AppendNameserver(ENV.UPSTREAM_DNS)
 	if err != nil {
 		return err
 	}
 
 	// Write the peers to the dnsmasq configuration
 	for _, peer := range peers {
-		err = SyncDNSEntry(peer.Hostname, peer.RemoteTunAddress, false)
+		err = AppendHostname(peer.Hostname, peer.RemoteTunAddress)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -105,7 +111,7 @@ func ClearDNS() error {
 	return err
 }
 
-func SyncDNSEntry(hostname string, ip string, delete bool) error {
+func AppendNameserver(nameserver string) error {
 	// Open the dnsmasq configuration file
 	file, err := os.OpenFile("/etc/wg-dnsmasq.conf", os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -120,20 +126,40 @@ func SyncDNSEntry(hostname string, ip string, delete bool) error {
 		lines = append(lines, scanner.Text())
 	}
 
-	// Remove any existing line with the same hostname
-	for i := 0; i < len(lines); i++ {
-		if strings.Contains(lines[i], hostname) {
-			// Remove the line
-			lines = append(lines[:i], lines[i+1:]...)
-			i-- // Decrease the index to re-check the current position
+	// Append the new line
+	newEntry := "server=/" + nameserver + "/"
+	lines = append(lines, newEntry)
+
+	// Write the lines back to the file
+	file.Truncate(0)
+	file.Seek(0, 0)
+	for _, line := range lines {
+		_, err = file.WriteString(line + "\n")
+		if err != nil {
+			return err
 		}
+	}
+	return err
+}
+
+func AppendHostname(hostname string, ip string) error {
+	// Open the dnsmasq configuration file
+	file, err := os.OpenFile("/etc/wg-dnsmasq.conf", os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Split the file into lines
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
 	}
 
 	// Append the new line
-	if !delete {
-		newEntry := "address=/" + hostname + "/" + ip
-		lines = append(lines, newEntry)
-	}
+	newEntry := "address=/" + hostname + "/" + ip
+	lines = append(lines, newEntry)
 
 	// Write the lines back to the file
 	file.Truncate(0)

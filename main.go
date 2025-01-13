@@ -29,6 +29,7 @@ type Env struct {
 	WG_PORT          string // Port for wireguard to listen on (optional)
 	API_PORT         string // Port for API to listen on (optional)
 	SERVER_HOSTNAME  string // Internal hostname of the server (optional)
+	UPSTREAM_DNS     string // Upstream DNS server (optional)
 }
 
 var ENV Env
@@ -200,6 +201,12 @@ func LoadEnvVars() {
 	if ENV.SERVER_HOSTNAME == "" {
 		log.Println("SERVER_HOSTNAME is not set. Defaulting to wg-controller")
 		ENV.SERVER_HOSTNAME = "wg-controller"
+	}
+
+	ENV.UPSTREAM_DNS = os.Getenv("UPSTREAM_DNS")
+	if ENV.UPSTREAM_DNS == "" {
+		log.Println("UPSTREAM_DNS is not set. Defaulting to 8.8.8.8")
+		ENV.UPSTREAM_DNS = "8.8.8.8"
 	}
 }
 
