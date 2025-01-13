@@ -90,6 +90,13 @@ func SyncWireguardConfiguration() error {
 			}
 			allowedIPs = append(allowedIPs, *ipNet)
 		}
+		// Append peer's own subnet
+		_, ipNet, err := net.ParseCIDR(peer.RemoteTunAddress + "/32")
+		if err != nil {
+			log.Println("Error parsing peer's own subnet:", err)
+		} else {
+			allowedIPs = append(allowedIPs, *ipNet)
+		}
 
 		// Create wireguard-go peer configuration
 		wgPeer := wgtypes.PeerConfig{
