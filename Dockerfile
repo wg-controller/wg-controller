@@ -43,7 +43,7 @@ COPY --from=builder /app/wireguard-go/wireguard-go /usr/bin/wireguard-go
 RUN apk add --no-cache dnsmasq
 
 # Packages to help with debugging
-#RUN apk add --no-cache -U wireguard-tools
+RUN apk add --no-cache -U wireguard-tools
 
 # Run
 CMD ["/app/main"]
