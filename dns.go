@@ -10,6 +10,8 @@ import (
 	"github.com/wg-controller/wg-controller/db"
 )
 
+var dnsKillChan chan bool
+
 func InitDNS() {
 	// Sync the DNS configuration
 	err := SyncPeersDNS(false)
@@ -20,19 +22,35 @@ func InitDNS() {
 	// Get server address without mask
 	serverAddress := strings.Split(ENV.SERVER_ADDRESS, "/")[0]
 
-	// Start the DNS server
+	// Start the DNS server in a goroutine
+	go startDNS(serverAddress)
+}
+
+func startDNS(serverAddress string) {
 	log.Println("Starting DNS server...")
-	cmd := exec.Command("dnsmasq", "--listen-address="+serverAddress, "--conf-file=/etc/wg-dnsmasq.conf")
-	out, err := cmd.Output()
+	cmd := exec.Command("dnsmasq", "--listen-address="+serverAddress, "--conf-file=/etc/wg-dnsmasq.conf", "-k")
+	err := cmd.Start()
 	if err != nil {
-		log.Fatal(err.Error() + ":" + string(out))
+		log.Fatal(err.Error())
 	}
-	log.Println("DNS server started")
+
+	// Create a channel to kill the DNS server
+	dnsKillChan = make(chan bool)
+
+	// Listen for kill signal
+	select {
+	case <-dnsKillChan:
+		// Kill the dnsmasq process if the channel receives a signal
+		log.Println("Stopping DNS server...")
+		cmd.Process.Kill()
+	}
 }
 
 func RestartDNS() {
-	cmd := exec.Command("kill", "-HUP", "$(pidof dnsmasq)")
-	cmd.Run()
+	// Send a signal to the DNS server to restart
+	dnsKillChan <- true
+
+	startDNS(strings.Split(ENV.SERVER_ADDRESS, "/")[0])
 }
 
 // Synchronises peers from the database with the dnsmasq configuration
@@ -40,6 +58,12 @@ func SyncPeersDNS(restart bool) error {
 	log.Println("Syncing hostnames with DNS server")
 	// Get all peers from the database
 	peers, err := db.GetPeers()
+	if err != nil {
+		return err
+	}
+
+	// Clear the dnsmasq configuration
+	err = ClearDNS()
 	if err != nil {
 		return err
 	}
@@ -66,6 +90,19 @@ func SyncPeersDNS(restart bool) error {
 	}
 
 	return nil
+}
+
+func ClearDNS() error {
+	// Open the dnsmasq configuration file
+	file, err := os.OpenFile("/etc/wg-dnsmasq.conf", os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Truncate the file
+	err = file.Truncate(0)
+	return err
 }
 
 func SyncDNSEntry(hostname string, ip string, delete bool) error {
