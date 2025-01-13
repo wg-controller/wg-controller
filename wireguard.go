@@ -51,6 +51,30 @@ func StopWireguard() {
 	}
 }
 
+func PruneWireguardPeers(peerPublicKeys []string) error {
+	var wgPeers []wgtypes.PeerConfig
+	for _, pk := range peerPublicKeys {
+		// Parse PublicKey
+		publicKey, err := wgtypes.ParseKey(pk)
+		if err != nil {
+			return err
+		}
+
+		// Create wireguard-go peer configuration with Remove set to true
+		wgPeer := wgtypes.PeerConfig{
+			PublicKey: publicKey,
+			Remove:    true,
+		}
+		wgPeers = append(wgPeers, wgPeer)
+	}
+
+	// Append the wireguard-go configuration
+	return wg.ConfigureDevice(ENV.WG_INTERFACE, wgtypes.Config{
+		ReplacePeers: false,
+		Peers:        wgPeers,
+	})
+}
+
 func SyncWireguardConfiguration() error {
 	// Get all peers from the database
 	peers, err := db.GetPeers()
@@ -104,6 +128,7 @@ func SyncWireguardConfiguration() error {
 			PresharedKey:                &preSharedKey,
 			PersistentKeepaliveInterval: &keepAliveDuration,
 			AllowedIPs:                  allowedIPs,
+			ReplaceAllowedIPs:           true,
 		}
 		wgPeers = append(wgPeers, wgPeer)
 	}
@@ -120,9 +145,9 @@ func SyncWireguardConfiguration() error {
 		return err
 	}
 
-	// Overwrite the wireguard-go configuration
+	// Append the wireguard-go configuration
 	return wg.ConfigureDevice(ENV.WG_INTERFACE, wgtypes.Config{
-		ReplacePeers: true,
+		ReplacePeers: false,
 		Peers:        wgPeers,
 		PrivateKey:   &privateKey,
 		ListenPort:   &wgPort,

@@ -256,6 +256,7 @@ func DELETE_Peer(c *gin.Context) {
 		return
 	}
 
+	// Delete peer from database
 	err = db.DeletePeer(uuid)
 	if err != nil {
 		log.Println(err)
@@ -265,10 +266,13 @@ func DELETE_Peer(c *gin.Context) {
 		return
 	}
 
-	// Resync wireguard configuration
-	err = SyncWireguardConfiguration()
+	// Prune wireguard configuration
+	err = PruneWireguardPeers([]string{peer.PublicKey})
 	if err != nil {
 		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
 	}
 
 	// Delete host DNS entry
