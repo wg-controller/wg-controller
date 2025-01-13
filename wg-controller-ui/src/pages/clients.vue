@@ -505,10 +505,10 @@ async function NewClientWizardDialog() {
             <v-row no-gutters>
               <v-combobox
                 v-model="clientBuffer!.remoteSubnets"
-                :rules="[subnetsValidate, required]"
+                :rules="[subnetsValidate]"
                 multiple
                 chips
-                label="Remote Subnets"
+                label="Remote Subnets (optional)"
                 variant="solo"
                 flat
                 bg-color="oddRow"
@@ -645,10 +645,10 @@ async function NewClientWizardDialog() {
           <v-row no-gutters>
             <v-combobox
               v-model="clientBuffer!.remoteSubnets"
-              :rules="[subnetsValidate, required]"
+              :rules="[subnetsValidate]"
               multiple
               chips
-              label="Remote Subnets"
+              label="Remote Subnets (optional)"
               variant="solo"
               flat
               bg-color="oddRow"
