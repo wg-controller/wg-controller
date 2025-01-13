@@ -188,6 +188,14 @@ function NextButtonText() {
   }
 }
 
+function WizardDownloadButton() {
+  if (clientWizardStep.value === 3 && clientWizardType.value !== "Managed Client") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 function NextButtonColor() {
   if (clientWizardStep.value < 3) {
     return "";
@@ -604,6 +612,15 @@ async function NewClientWizardDialog() {
           </v-card>
         </template>
         <template #next>
+          <v-spacer></v-spacer>
+          <v-btn
+            class="mx-3"
+            @click="DownloadWGConfig()"
+            v-if="WizardDownloadButton()"
+            :disabled="false"
+          >
+            Download
+          </v-btn>
           <v-btn
             :disabled="!NextButtonEnabled()"
             :color="NextButtonColor()"
