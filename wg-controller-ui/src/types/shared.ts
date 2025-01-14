@@ -28,6 +28,7 @@ export interface PeerInit {
   preSharedKey: string;
   localTunAddress: string;
   remoteTunAddress: string;
+  serverCIDR: string;
 }
 export interface UserAccount {
   email: string;

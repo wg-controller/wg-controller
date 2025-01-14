@@ -26,6 +26,7 @@ type PeerInit struct {
 	PreSharedKey     string `json:"preSharedKey"`
 	LocalTunAddress  string `json:"localTunAddress"`
 	RemoteTunAddress string `json:"remoteTunAddress"`
+	ServerCIDR       string `json:"serverCIDR"`
 }
 
 type UserAccount struct {
