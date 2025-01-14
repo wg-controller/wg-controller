@@ -164,7 +164,7 @@ func AuthMiddleware(c *gin.Context) {
 				return
 			} else if attributes[i] == "wg-client" {
 				// "wg-client" has full access to "peers" and "poll" topics
-				if topic == "peers" || topic == "poll" {
+				if topic == "peers" || topic == "poll" || topic == "serverinfo" {
 					c.Next()
 					return
 				}
