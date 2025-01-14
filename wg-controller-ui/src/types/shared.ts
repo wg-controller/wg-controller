@@ -68,6 +68,7 @@ export interface ServerInfo {
   publicEndpoint: string;
   nameServers: string[];
   netmask: string;
+  serverInternalIP: string;
 }
 export interface Password {
   password: string;
