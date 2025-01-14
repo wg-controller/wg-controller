@@ -177,6 +177,87 @@ func GetPeer(uuid string) (types.Peer, error) {
 	return peer, nil
 }
 
+func GetPeerByHostname(hostname string) (types.Peer, error) {
+	// Query the database
+	query := `SELECT
+		uuid,
+		hostname,
+		enabled,
+		private_key,
+		public_key,
+		pre_shared_key,
+		keep_alive_seconds,
+		local_tun_address,
+		remote_tun_address,
+		remote_subnets,
+		allowed_subnets,
+		last_seen_unixmillis,
+		last_ip_address,
+		attributes
+		FROM peers
+		WHERE hostname = @p1`
+	row := DB.QueryRow(query, hostname)
+
+	// Scan the row
+	var peer types.Peer
+	var remoteSubnets string
+	var allowedSubnets string
+	var attributes string
+	err := row.Scan(
+		&peer.UUID,
+		&peer.Hostname,
+		&peer.Enabled,
+		&peer.PrivateKey,
+		&peer.PublicKey,
+		&peer.PreSharedKey,
+		&peer.KeepAliveSeconds,
+		&peer.LocalTunAddress,
+		&peer.RemoteTunAddress,
+		&remoteSubnets,
+		&allowedSubnets,
+		&peer.LastSeenUnixMillis,
+		&peer.LastIPAddress,
+		&attributes,
+	)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	// Split arrays
+	peer.RemoteSubnets = strings.Split(remoteSubnets, ",")
+	if len(peer.RemoteSubnets) == 1 {
+		if peer.RemoteSubnets[0] == "" {
+			peer.RemoteSubnets = []string{}
+		}
+	}
+	peer.AllowedSubnets = strings.Split(allowedSubnets, ",")
+	if len(peer.AllowedSubnets) == 1 {
+		if peer.AllowedSubnets[0] == "" {
+			peer.AllowedSubnets = []string{}
+		}
+	}
+	peer.Attributes = strings.Split(attributes, ",")
+	if len(peer.Attributes) == 1 {
+		if peer.Attributes[0] == "" {
+			peer.Attributes = []string{}
+		}
+	}
+
+	// Decrypt the private_key
+	peer.PrivateKey, err = DecryptAES(peer.PrivateKey, AES_KEY)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	// Decrypt the pre_shared_key
+	peer.PreSharedKey, err = DecryptAES(peer.PreSharedKey, AES_KEY)
+	if err != nil {
+		return types.Peer{}, err
+	}
+
+	return peer, nil
+}
+
 func InsertPeer(peer types.Peer) (err error) {
 	// Encrypt the private_key
 	peer.PrivateKey, err = EncryptAES(peer.PrivateKey, AES_KEY)

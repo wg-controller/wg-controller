@@ -34,6 +34,7 @@ func StartAPI() {
 	// Private Endpoints
 	private.GET("/peers", GET_Peers)
 	private.GET("/peers/:uuid", GET_Peer)
+	private.GET("/peers/hostname/:hostname", GET_PeerByHostname)
 	private.PUT("/peers/:uuid", PUT_Peer)
 	private.PATCH("/peers/:uuid", PATCH_Peer)
 	private.DELETE("/peers/:uuid", DELETE_Peer)
@@ -117,9 +118,37 @@ func GET_Peer(c *gin.Context) {
 	peer, err := db.GetPeer(uuid)
 	if err != nil {
 		log.Println(err)
-		c.JSON(500, gin.H{
-			"error": err.Error(),
+		c.Status(404)
+		return
+	}
+
+	if peer.Enabled {
+		peer, err = GetWireguardPeer(peer)
+		if err != nil {
+			log.Println(err)
+			c.JSON(500, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+	}
+
+	c.JSON(200, peer)
+}
+
+func GET_PeerByHostname(c *gin.Context) {
+	hostname := c.Param("hostname")
+	if hostname == "" {
+		c.JSON(400, gin.H{
+			"error": "hostname is required",
 		})
+		return
+	}
+
+	peer, err := db.GetPeerByHostname(hostname)
+	if err != nil {
+		log.Println(err)
+		c.Status(404)
 		return
 	}
 
