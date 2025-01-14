@@ -115,7 +115,7 @@ export async function DELETE_Peer(uuid: string): Promise<void> {
 }
 
 export async function GET_PeerInit(): Promise<PeerInit> {
-  const response = await fetch("/api/v1/peerinit");
+  const response = await fetch("/api/v1/peers/init");
   if (!response.ok) {
     const err = await response.text();
     throw new Error(err);
@@ -249,7 +249,7 @@ export async function DELETE_APIKey(uuid: string): Promise<void> {
 }
 
 export async function GET_APIKeyInit(): Promise<APIKeyInit> {
-  const response = await fetch("/api/v1/apikeyinit");
+  const response = await fetch("/api/v1/apikeys/init");
   if (!response.ok) {
     const err = await response.text();
     throw new Error(err);
