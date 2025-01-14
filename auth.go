@@ -150,16 +150,11 @@ func AuthMiddleware(c *gin.Context) {
 		}
 
 		// Get permission string for current route
-		permission, err := PermissionString(c)
+		permission, topic, err := PermissionString(c)
 		if err != nil {
 			c.AbortWithStatus(500)
 			log.Println(err)
 			return
-		}
-
-		// wg-client is a special permission set
-		if permission == "read-poll" {
-			permission = "wg-client"
 		}
 
 		// Check if the api key has the required permission
@@ -167,6 +162,12 @@ func AuthMiddleware(c *gin.Context) {
 			if attributes[i] == permission {
 				c.Next()
 				return
+			} else if attributes[i] == "wg-client" {
+				// "wg-client" has full access to "peers" and "poll" topics
+				if topic == "peers" || topic == "poll" {
+					c.Next()
+					return
+				}
 			}
 		}
 		log.Println("Insufficient permissions for token from IP:", c.ClientIP(), "required:", permission, "actual:", attributes)
@@ -179,7 +180,7 @@ func AuthMiddleware(c *gin.Context) {
 	c.AbortWithStatus(403)
 }
 
-func PermissionString(c *gin.Context) (permission string, err error) {
+func PermissionString(c *gin.Context) (permission string, topic string, err error) {
 	// Get the HTTP method
 	method := c.Request.Method
 	operation := ""
@@ -193,7 +194,7 @@ func PermissionString(c *gin.Context) (permission string, err error) {
 	case "DELETE":
 		operation = "delete"
 	default:
-		return "", errors.New("invalid method")
+		return "", "", errors.New("invalid method")
 	}
 
 	// Split the full route
@@ -211,15 +212,15 @@ func PermissionString(c *gin.Context) (permission string, err error) {
 
 	// Check if "api" is in the route
 	if index == -1 {
-		return "", errors.New("invalid route")
+		return "", "", errors.New("invalid route")
 	}
 
 	// Check if the route is too short
 	if len(splitRoute) < index+2 {
-		return "", errors.New("invalid route")
+		return "", "", errors.New("invalid route")
 	}
 
-	return operation + "-" + splitRoute[index+2], nil
+	return operation + "-" + splitRoute[index+2], splitRoute[index+2], nil
 }
 
 func POST_PreLogin(c *gin.Context) {
