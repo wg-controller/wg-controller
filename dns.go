@@ -48,9 +48,13 @@ func startDNS(serverAddress string) {
 
 func RestartDNS() {
 	// Send a signal to the DNS server to restart
-	dnsKillChan <- true
+	select {
+	case dnsKillChan <- true:
+	default:
+		log.Println("DNS server is not running")
+	}
 
-	startDNS(strings.Split(ENV.SERVER_ADDRESS, "/")[0])
+	go startDNS(strings.Split(ENV.SERVER_ADDRESS, "/")[0])
 }
 
 // Synchronises peers from the database with the dnsmasq configuration
