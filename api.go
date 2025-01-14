@@ -34,11 +34,10 @@ func StartAPI() {
 	// Private Endpoints
 	private.GET("/peers", GET_Peers)
 	private.GET("/peers/:uuid", GET_Peer)
-	private.GET("/peers/hostname/:hostname", GET_PeerByHostname)
 	private.PUT("/peers/:uuid", PUT_Peer)
 	private.PATCH("/peers/:uuid", PATCH_Peer)
 	private.DELETE("/peers/:uuid", DELETE_Peer)
-	private.GET("/peerinit", GET_InitPeer)
+	private.GET("/peers/init", GET_InitPeer)
 
 	private.GET("/accounts", GET_Accounts)
 	private.PUT("/accounts/:email", PUT_Account)
@@ -50,7 +49,7 @@ func StartAPI() {
 	private.PUT("/apikeys/:uuid", PUT_APIKey)
 	private.PATCH("/apikeys/:uuid", PATCH_APIKey)
 	private.DELETE("/apikeys/:uuid", DELETE_APIKey)
-	private.GET("/apikeyinit", GET_InitAPIKey)
+	private.GET("/apikeys/init", GET_InitAPIKey)
 
 	private.GET("/serverinfo", GET_ServerInfo)
 
@@ -116,36 +115,6 @@ func GET_Peer(c *gin.Context) {
 	}
 
 	peer, err := db.GetPeer(uuid)
-	if err != nil {
-		log.Println(err)
-		c.Status(404)
-		return
-	}
-
-	if peer.Enabled {
-		peer, err = GetWireguardPeer(peer)
-		if err != nil {
-			log.Println(err)
-			c.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-	}
-
-	c.JSON(200, peer)
-}
-
-func GET_PeerByHostname(c *gin.Context) {
-	hostname := c.Param("hostname")
-	if hostname == "" {
-		c.JSON(400, gin.H{
-			"error": "hostname is required",
-		})
-		return
-	}
-
-	peer, err := db.GetPeerByHostname(hostname)
 	if err != nil {
 		log.Println(err)
 		c.Status(404)
@@ -370,6 +339,8 @@ func GET_InitPeer(c *gin.Context) {
 		return
 	}
 	InitPeer.RemoteTunAddress = address
+
+	InitPeer.ServerCIDR = ENV.SERVER_CIDR
 
 	c.JSON(200, InitPeer)
 }
