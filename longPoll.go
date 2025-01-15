@@ -96,7 +96,7 @@ func SendClientMessage(uuid string, msg LP_Message) error {
 
 func PushPeerConfig(Peer types.Peer) {
 	msg := LP_Message{
-		Topic:  "config",
+		Topic:  "peerConfig",
 		Config: Peer,
 	}
 	SendClientMessage(Peer.UUID, msg)
