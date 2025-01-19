@@ -152,8 +152,8 @@ func LoadEnvVars() {
 
 	ENV.SERVER_CIDR = os.Getenv("SERVER_CIDR")
 	if ENV.SERVER_CIDR == "" {
-		log.Println("SERVER_CIDR is not set. Defaulting to 172.18.0.0/24")
-		ENV.SERVER_CIDR = "172.18.0.0/24"
+		log.Println("SERVER_CIDR is not set. Defaulting to 172.19.0.0/24")
+		ENV.SERVER_CIDR = "172.19.0.0/24"
 	} else {
 		ip, _, err := net.ParseCIDR(ENV.SERVER_CIDR)
 		if err != nil {
