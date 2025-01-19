@@ -16,7 +16,8 @@ A wireguard VPN server and control plane with central web management.
 
 ### Docker
 
-Use following commands to generate WG_PRIVATE_KEY and DB_AES_KEY in docker-compose.yaml
+- Clone repo or download docker-compose.yaml
+- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill environment fields in docker-compose.yaml
 
 ```
 docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
@@ -26,7 +27,7 @@ docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generat
 docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
 ```
 
-Start server with docker compose
+- Start server with docker compose
 
 ```
 docker compose up
@@ -34,7 +35,9 @@ docker compose up
 
 ### Kubernetes
 
-Use following commands to generate WG_PRIVATE_KEY and DB_AES_KEY in kube-manifests.yaml
+- Clone repo or download kube-manifests.yaml
+
+- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill env fields in kube-manifests.yaml
 
 ```
 docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
@@ -44,7 +47,7 @@ docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generat
 docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
 ```
 
-Deploy to kubernetes with kubectl
+- Deploy to kubernetes with kubectl
 
 ```
 kubectl apply -f kube-manifests.yaml
