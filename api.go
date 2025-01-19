@@ -178,6 +178,12 @@ func PUT_Peer(c *gin.Context) {
 		log.Println(err)
 	}
 
+	// Resync routing table
+	err = SyncRoutingTable()
+	if err != nil {
+		log.Println(err)
+	}
+
 	// Push config to peer
 	PushPeerConfig(peer)
 
@@ -223,6 +229,12 @@ func PATCH_Peer(c *gin.Context) {
 
 	// Resync peers DNS entries
 	err = SyncPeersDNS(true)
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Resync routing table
+	err = SyncRoutingTable()
 	if err != nil {
 		log.Println(err)
 	}
@@ -275,6 +287,12 @@ func DELETE_Peer(c *gin.Context) {
 
 	// Resync peers DNS entries
 	err = SyncPeersDNS(true)
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Resync routing table
+	err = SyncRoutingTable()
 	if err != nil {
 		log.Println(err)
 	}

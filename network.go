@@ -1,10 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os/exec"
+	"runtime"
+
+	"github.com/vishvananda/netlink"
+	"github.com/wg-controller/wg-controller/db"
 )
 
 func GetUniqueAddress(usedAddresses []string, serverNetwork string) (string, error) {
@@ -155,5 +160,73 @@ func InitNetworking() {
 	err := cmd1.Run()
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func SyncRoutingTable() error {
+	// Get all peers from the database
+	peers, err := db.GetPeers()
+	if err != nil {
+		return err
+	}
+
+	// Cleanup old routes
+	err = CleanupRoutes()
+	if err != nil {
+		return err
+	}
+
+	// Add new routes
+	for _, peer := range peers {
+		for _, network := range peer.RemoteSubnets {
+			err = AddRoute(network, peer.RemoteTunAddress)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func CleanupRoutes() error {
+	cleanCount := 0
+	switch runtime.GOOS {
+	case "linux", "darwin":
+		routes, _ := netlink.RouteList(nil, 2)
+		for _, route := range routes {
+			if route.Protocol == 171 {
+				err := netlink.RouteDel(&route)
+				if err == nil {
+					cleanCount++
+				}
+			}
+		}
+		log.Println("Cleaned up", cleanCount, "routes")
+		return nil
+	default:
+		return errors.New("unsupported OS")
+	}
+}
+
+func AddRoute(destination string, gateway string) error {
+	switch runtime.GOOS {
+	case "linux", "darwin":
+		_, dst, err := net.ParseCIDR(destination)
+		if err != nil {
+			return err
+		}
+		gw := net.ParseIP(gateway)
+		if gw == nil {
+			return errors.New("invalid gateway IP")
+		}
+		route := netlink.Route{
+			Dst:      dst,
+			Gw:       gw,
+			Protocol: 171, // Identifies the route as a WireGuard route
+		}
+		return netlink.RouteAdd(&route)
+	default:
+		return errors.New("unsupported OS")
 	}
 }

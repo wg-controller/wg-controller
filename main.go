@@ -94,6 +94,12 @@ func main() {
 	// Init DNS
 	InitDNS()
 
+	// Sync routing table
+	err = SyncRoutingTable()
+	if err != nil {
+		log.Fatal("Error syncing routing table:", err)
+	}
+
 	// Init long polling
 	InitLongPoll()
 
