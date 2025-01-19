@@ -59,25 +59,30 @@ func GET_LongPoll(c *gin.Context) {
 	}
 
 	// Does the client have a channel?
-	lpClient, ok := LP_Clients.Load(uuid)
+	lpClientInterface, ok := LP_Clients.Load(uuid)
 	if !ok {
-		// Create a new bufferred channel
+		// Create a new buffered channel
 		ch := make(chan LP_Message, 50)
-		lpClient = LP_Client{
+		lpClient := &LP_Client{
 			Ch:           ch,
 			LastConsumed: time.Now(),
 		}
-		LP_Clients.Store(uuid, &ch)
+		LP_Clients.Store(uuid, lpClient)
+		lpClientInterface = lpClient
 	}
+
+	// Cast the interface once to the pointer
+	lpClient := lpClientInterface.(*LP_Client)
 
 	// Send available message or wait
 	select {
-	case msg := <-lpClient.(*LP_Client).Ch:
-		lpClient.(*LP_Client).LastConsumed = time.Now()
+	case msg := <-lpClient.Ch:
+		lpClient.LastConsumed = time.Now()
 		c.JSON(200, msg)
 		return
 	case <-time.After(PollTimeout):
-		c.JSON(204, gin.H{})
+		lpClient.LastConsumed = time.Now()
+		c.Status(204) // Tells client to start a new poll
 		return
 	case <-c.Request.Context().Done():
 		return
