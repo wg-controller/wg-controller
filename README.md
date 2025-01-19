@@ -38,6 +38,10 @@ A wireguard VPN server and control plane with central web management.
   docker compose up
   ```
 
+- The web interface will be running on port :8080
+  > [!WARNING]
+  > Do not host this on the internet without an appropriate SSL reverse proxy (see [NGINX](https://hub.docker.com/_/nginx), [Caddy](https://caddyserver.com) etc)
+
 ### Kubernetes
 
 - Clone repo or download kube-manifests.yaml
@@ -52,6 +56,7 @@ A wireguard VPN server and control plane with central web management.
   ```
 
 - Fill in remaining env fields in kube-manifests.yaml
+- Configure ingress domain, SSL etc
 - Deploy to kubernetes with kubectl
 
   ```
