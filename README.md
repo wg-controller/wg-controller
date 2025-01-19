@@ -12,7 +12,7 @@ A wireguard VPN server and control plane with central web management.
 - Support for standard wireguard clients and 3rd party devices
 
 ## Deployment
-- Docker
+### Docker
 ```
 docker run -e PUBLIC_HOST='wg.example.com' \
 -e ADMIN_EMAIL='admin@example.com' \
@@ -28,7 +28,7 @@ docker run -e PUBLIC_HOST='wg.example.com' \
 --name wg-controller ghcr.io/wg-controller/wg-controller:latest
 ```
 
-- Kubernetes
+### Kubernetes
 ```
 kubectl apply -f kube-manifests.yaml
 ```
