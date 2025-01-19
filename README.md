@@ -39,8 +39,9 @@ A wireguard VPN server and control plane with central web management.
   ```
 
 - The web interface will be running on port :8080
-  > **WARNING**
-  > Do not host this on the internet without an appropriate SSL reverse proxy (see [NGINX](https://hub.docker.com/_/nginx), [Caddy](https://caddyserver.com) etc)
+
+> [!WARNING]
+> Do not host this on the internet without an appropriate SSL reverse proxy (see [NGINX](https://hub.docker.com/_/nginx), [Caddy](https://caddyserver.com) etc)
 
 ### Kubernetes
 
