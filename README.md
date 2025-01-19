@@ -3,6 +3,7 @@
 A wireguard VPN server and control plane with central web management.
 
 ## Features
+
 - Easily host your own Wireguard server with Docker or Kubernetes
 - Manage users and devices from a modern web interface
 - Integrated DNS server resolves devices by their configured name
@@ -12,30 +13,45 @@ A wireguard VPN server and control plane with central web management.
 - Support for standard wireguard clients and 3rd party devices
 
 ## Deployment
+
 ### Docker
+
+Use following commands to generate WG_PRIVATE_KEY and DB_AES_KEY in docker-compose.yaml
+
 ```
-docker run -e PUBLIC_HOST='wg.example.com' \
--e ADMIN_EMAIL='admin@example.com' \
--e ADMIN_PASS='examplepass1234!!' \
--e WG_PRIVATE_KEY='' \
--e DB_AES_KEY='' \
--p 8081:8081 \
--p 51820:51820/udp \
---cap-add NET_ADMIN \
---cap-add SYS_MODULE \
---sysctl 'net.ipv4.conf.all.src_valid_mark=1' \
---sysctl 'net.ipv4.ip_forward=1' \
---name wg-controller ghcr.io/wg-controller/wg-controller:latest
+docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
+```
+
+```
+docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
+```
+
+Start server with docker compose
+
+```
+docker compose up
 ```
 
 ### Kubernetes
+
+Use following commands to generate WG_PRIVATE_KEY and DB_AES_KEY in kube-manifests.yaml
+
+```
+docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
+```
+
+```
+docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
+```
+
+Deploy to kubernetes with kubectl
+
 ```
 kubectl apply -f kube-manifests.yaml
 ```
 
-
-
 ## Development
+
 [Tygo](https://github.com/gzuidhof/tygo) is used for generating TypeScript types from Golang types <br>
 Install Tygo with `go install github.com/gzuidhof/tygo@latest` <br>
 Running `tygo generate` will export Go types to frontend.
