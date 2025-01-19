@@ -49,9 +49,9 @@ docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generat
 
 - Deploy to kubernetes with kubectl
 
-```
-kubectl apply -f kube-manifests.yaml
-```
+        ```
+        kubectl apply -f kube-manifests.yaml
+        ```
 
 ## Development
 
