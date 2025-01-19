@@ -45,11 +45,11 @@ spec:
             - name: ADMIN_EMAIL
               value: "admin@example.com"
             - name: ADMIN_PASS
-              value: "A secure password"
+              value: ""
             - name: WG_PRIVATE_KEY
-              value: "Generate a key using wg-controller CLI"
+              value: ""
             - name: DB_AES_KEY
-              value: "Generate a key using wg-controller CLI"
+              value: ""
           volumeMounts:
             - mountPath: /data
               name: wg-controller-data
