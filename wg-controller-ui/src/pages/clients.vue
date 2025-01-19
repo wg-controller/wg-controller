@@ -18,6 +18,10 @@ import {
 } from "@/api/methods";
 const store = useStore(key);
 
+// Const Values
+const ManagedClient = 1;
+const StandardWireguardClient = 2;
+
 const fetchInterval = ref<ReturnType<typeof setInterval>>();
 
 onMounted(() => {
@@ -70,7 +74,7 @@ const search = ref("");
 const loading = ref(true);
 
 const clientWizard = ref(false);
-const clientWizardType = ref("Managed Client");
+const clientWizardType = ref(ManagedClient);
 const clientWizardPlatform = ref("Linux");
 const clientWizardStep = ref(1);
 const clientWizardInstallCMD = function () {
@@ -156,7 +160,7 @@ async function NextClientWizardStep() {
   if (clientWizardStep.value < 3) {
     clientWizardStep.value++;
   } else {
-    if (clientWizardType.value === "Managed Client") {
+    if (clientWizardType.value === ManagedClient) {
       clientWizard.value = false;
     } else {
       // Apply changes to Wireguard client
@@ -180,7 +184,7 @@ function NextButtonText() {
   if (clientWizardStep.value < 3) {
     return "Next";
   } else {
-    if (clientWizardType.value === "Managed Client") {
+    if (clientWizardType.value === ManagedClient) {
       return "Finish";
     } else {
       return "Apply";
@@ -189,7 +193,7 @@ function NextButtonText() {
 }
 
 function WizardDownloadButton() {
-  if (clientWizardStep.value === 3 && clientWizardType.value !== "Managed Client") {
+  if (clientWizardStep.value === 3 && clientWizardType.value !== ManagedClient) {
     return true;
   } else {
     return false;
@@ -210,7 +214,7 @@ function NextButtonEnabled() {
   }
 
   // Validate input
-  if (clientWizardStep.value === 2 && clientWizardType.value === "Wireguard Client") {
+  if (clientWizardStep.value === 2 && clientWizardType.value === StandardWireguardClient) {
     if (
       hostValidate(clientBuffer.value.hostname) !== true ||
       subnetsValidate(clientBuffer.value.remoteSubnets) !== true ||
@@ -342,7 +346,7 @@ async function NewClientWizardDialog() {
     attributes: []
   };
   clientWizardStep.value = 1;
-  clientWizardType.value = "Managed Client";
+  clientWizardType.value = ManagedClient;
   clientWizardPlatform.value = "Linux";
   clientWizard.value = true;
 }
@@ -456,16 +460,22 @@ async function NewClientWizardDialog() {
         <template #item.1>
           <v-card title="Select Client Type" flat>
             <v-radio-group v-model="clientWizardType" row class="ml-5">
-              <v-radio key="Managed Client" label="Managed Client" value="Managed Client" />
-              <v-radio key="Wireguard Client" label="Wireguard Client" value="Wireguard Client" />
+              <v-radio key="Managed Client" label="Managed Client" :value="ManagedClient" />
+              <v-radio
+                key="Wireguard Client"
+                label="Standard Wireguard Client"
+                :value="StandardWireguardClient"
+              />
             </v-radio-group>
-            <div v-if="clientWizardType === 'Managed Client'" class="mx-13">
+            <div v-if="clientWizardType === ManagedClient" class="mx-13">
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">
                 mdi-information
               </v-icon>
-              <span class="text-grey-darken-2"> A device running the client software. </span>
+              <span class="text-grey-darken-2">
+                A device running the WG Controller client software.
+              </span>
             </div>
-            <div v-if="clientWizardType === 'Wireguard Client'" class="mx-13">
+            <div v-if="clientWizardType === StandardWireguardClient" class="mx-13">
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">
                 mdi-information
               </v-icon>
@@ -477,7 +487,7 @@ async function NewClientWizardDialog() {
         </template>
 
         <template #item.2>
-          <v-card v-if="clientWizardType === 'Managed Client'" title="Select Platform" flat>
+          <v-card v-if="clientWizardType === ManagedClient" title="Select Platform" flat>
             <v-radio-group v-model="clientWizardPlatform" row class="ml-5">
               <v-radio
                 v-for="platform in platforms"
@@ -562,7 +572,7 @@ async function NewClientWizardDialog() {
         </template>
 
         <template #item.3>
-          <v-card v-if="clientWizardType === 'Managed Client'" title="Steps To Deploy" flat>
+          <v-card v-if="clientWizardType === ManagedClient" title="Steps To Deploy" flat>
             <h4 class="mx-7 mb-1 mt-2">Install Client</h4>
             <v-code class="mx-7">
               {{ clientWizardInstallCMD() }}
