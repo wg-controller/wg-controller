@@ -397,7 +397,7 @@ func POST_Login(c *gin.Context) {
 	tokenBase64 := base64.URLEncoding.EncodeToString(tokenBytes)
 
 	// Set cookie
-	c.SetCookie("sessionId", tokenBase64, 0, "", "", true, true)
+	c.SetCookie("sessionId", tokenBase64, 0, "", "", false, true)
 	log.Println("User logged in:", login.Email, "from IP:", c.ClientIP())
 	c.JSON(200, gin.H{
 		"status": "ok",
@@ -456,7 +456,7 @@ func POST_Logout(c *gin.Context) {
 	}
 
 	// Delete the session cookie
-	c.SetCookie("sessionId", "", -1, "", "", true, true)
+	c.SetCookie("sessionId", "", -1, "", "", false, true)
 	log.Println("User logged out:", email, "from IP:", c.ClientIP())
 	c.JSON(200, gin.H{
 		"status": "ok",
