@@ -7,14 +7,18 @@ services:
     environment:
       PUBLIC_HOST: "wg.example.com"
       ADMIN_EMAIL: "admin@example.com"
-      ADMIN_PASS: "examplepass1234!!"
-      WG_PRIVATE_KEY: "aLgYBsbo03dbCwy5PsjY1XnVSNhFjAZa77WIm3DmkFQ="
-      DB_AES_KEY: "XcGtQDqPeJQOx+BJvmfpYXcqO0CmB/AifJd9pVqj5D0="
+      ADMIN_PASS: ""
+      WG_PRIVATE_KEY: ""
+      DB_AES_KEY: ""
     ports:
       - "51820:51820/udp"
+    volumes:
+      - wg-controller-data:/data
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
+    privileged: true
+    user: "0"
     sysctls:
       net.ipv4.conf.all.src_valid_mark: 1
       net.ipv4.ip_forward: 1
@@ -25,3 +29,7 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+
+volumes:
+  wg-controller-data:
+    driver: local
