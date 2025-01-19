@@ -12,6 +12,10 @@ A wireguard VPN server and control plane with central web management.
 - Synchronization of keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
 - Support for standard wireguard clients and 3rd party devices
 
+## Screenshots
+
+![Clients Page](/screenshot1.png?raw=true "Client Management Page")
+
 ## Deployment
 
 ### Docker
