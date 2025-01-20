@@ -1,4 +1,4 @@
-# WG Controller
+# WireGuard Controller
 
 A wireguard VPN server and control plane with central web management.
 
@@ -85,7 +85,7 @@ kubectl apply -f kube-manifests.yaml
 ## Security
 
 - Wireguard keys encrypted at rest with AES256
-- Passwords and API keys salted and hashed before storage
+- User passwords and API keys salted and hashed before storage
 
 ## Development
 
