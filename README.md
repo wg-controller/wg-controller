@@ -82,6 +82,11 @@ kubectl apply -f kube-manifests.yaml
 | SERVER_HOSTNAME  | wg-controller | my-vpn-server                                |
 | UPSTREAM_DNS     | 8.8.8.8       | 1.1.1.1                                      |
 
+## Security
+
+- Wireguard keys encrypted at rest with AES256
+- Passwords and API keys salted and hashed before storage
+
 ## Development
 
 [Tygo](https://github.com/gzuidhof/tygo) is used for generating TypeScript types from Golang types <br>
