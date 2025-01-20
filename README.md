@@ -9,7 +9,7 @@ A WireGuard VPN server and control plane with central web management.
 - Integrated DNS server resolves devices by their configured name
 - Internal IP routing between clients
 - Share access to remote networks on a client by client basis
-- Synchronization of keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
+- Synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
 - Support for standard WireGuard clients and 3rd party devices
 
 ## Screenshots
@@ -25,46 +25,43 @@ A WireGuard VPN server and control plane with central web management.
 - Clone repo or download docker-compose.yaml
 - Generate WG_PRIVATE_KEY and DB_AES_KEY to fill environment fields in docker-compose.yaml
 
-```
-docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
-```
+  ```
+  docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-wg-key
+  ```
 
-```
-docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
-```
+  ```
+  docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-db-key
+  ```
 
 - Fill in remaining environment fields in docker-compose.yaml
 - Start server with docker compose
 
-```
-docker compose up
-```
+  ```
+  docker compose up
+  ```
 
 - The web interface will be running on port :8080
-
-> [!WARNING]
-> Do not host this on the internet without an appropriate SSL reverse proxy (see [NGINX](https://hub.docker.com/_/nginx), [Caddy](https://caddyserver.com))
 
 ### Kubernetes
 
 - Clone repo or download kube-manifests.yaml
 - Generate WG_PRIVATE_KEY and DB_AES_KEY to fill env fields in kube-manifests.yaml
 
-```
-docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-wg-key
-```
+  ```
+  docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-wg-key
+  ```
 
-```
-docker run --rm -it ghcr.io/wg-controller/wg-controller:latest /app/main generate-db-key
-```
+  ```
+  docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-db-key
+  ```
 
 - Fill in remaining env fields in kube-manifests.yaml
 - Configure ingress domain, SSL etc
 - Deploy to kubernetes with kubectl
 
-```
-kubectl apply -f kube-manifests.yaml
-```
+  ```
+  kubectl apply -f kube-manifests.yaml
+  ```
 
 ## Options
 
@@ -78,7 +75,7 @@ kubectl apply -f kube-manifests.yaml
 | SERVER_CIDR      | 172.19.0.0/24 | 192.168.10.0/24                              |
 | SERVER_ADDRESS   | 172.19.0.254  | 192.168.10.1                                 |
 | EGRESS_INTERFACE | eth0          | eth2                                         |
-| WG_INTERFACE     | wg0           | UTUN11                                       |
+| WG_INTERFACE     | wg0           | utun11                                       |
 | WG_PORT          | 51820         | 51821                                        |
 | API_PORT         | 8081          | 9000                                         |
 | SERVER_HOSTNAME  | wg-controller | my-vpn-server                                |
@@ -86,8 +83,15 @@ kubectl apply -f kube-manifests.yaml
 
 ## Security
 
+> [!WARNING]
+> Do not host this on the internet without an appropriate SSL reverse proxy (see [NGINX](https://hub.docker.com/_/nginx), [Caddy](https://caddyserver.com))
+
 - WireGuard keys encrypted at rest with AES256
-- User passwords and API keys salted and hashed before storage
+- Passwords and API keys salted and hashed before storage
+
+## Project Status
+
+This project is in its early development phase.
 
 ## Development
 
