@@ -46,4 +46,4 @@ RUN apk add --no-cache dnsmasq
 RUN apk add --no-cache -U wireguard-tools
 
 # Run
-CMD ["/app/main"]
+ENTRYPOINT ["/app/main"]
