@@ -64,7 +64,7 @@ const headers = ref([
   { title: "Last Seen", key: "lastSeenUnixMillis" },
   { title: "TX Bytes", key: "transmitBytes" },
   { title: "RX Bytes", key: "receiveBytes" },
-  { title: "Remote Address", key: "remoteTunAddress", sortable: false },
+  { title: "Address", key: "remoteTunAddress", sortable: false },
   { title: "Remote Subnets", key: "remoteSubnets", sortable: false },
   { title: "Enabled", key: "enabled" },
   { title: "", key: "actions", align: "end", sortable: false }
