@@ -16,6 +16,8 @@ A WireGuard VPN server and control plane with central web management.
 
 ![Clients Page](/screenshot1.png?raw=true "Client Management Page")
 
+![Client Dialog](/screenshot2.png?raw=true "Client Dialog")
+
 ## Deployment
 
 ### Docker
