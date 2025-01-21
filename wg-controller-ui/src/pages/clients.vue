@@ -268,7 +268,11 @@ const serverInfo = ref<ServerInfo>();
 const wgConfigDialog = ref(false);
 const wgConfigQRDialog = ref(false);
 
-const platforms = ref(["Linux", "MacOS", "Windows"]);
+const platforms = ref([
+  { name: "Linux", disabled: false },
+  { name: "MacOS", disabled: true },
+  { name: "Windows", disabled: true }
+]);
 
 function StartEditClient(client: Peer) {
   clientBuffer.value = JSON.parse(JSON.stringify(client));
@@ -527,9 +531,10 @@ async function NewClientWizardDialog() {
             <v-radio-group v-model="clientWizardPlatform" row class="ml-5">
               <v-radio
                 v-for="platform in platforms"
-                :key="platform"
-                :label="platform"
-                :value="platform"
+                :key="platform.name"
+                :label="platform.name"
+                :value="platform.name"
+                :disabled="platform.disabled"
               />
             </v-radio-group>
           </v-card>
