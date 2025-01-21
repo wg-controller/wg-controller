@@ -71,6 +71,7 @@ type APIKeyInit struct {
 type ServerInfo struct {
 	PublicKey        string   `json:"publicKey"`
 	PublicEndpoint   string   `json:"publicEndpoint"`
+	PublicHost       string   `json:"publicHost"`
 	NameServers      []string `json:"nameServers"`
 	Netmask          string   `json:"netmask"`
 	ServerInternalIP string   `json:"serverInternalIP"`

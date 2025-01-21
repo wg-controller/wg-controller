@@ -66,6 +66,7 @@ export interface APIKeyInit {
 export interface ServerInfo {
   publicKey: string;
   publicEndpoint: string;
+  publicHost: string;
   nameServers: string[];
   netmask: string;
   serverInternalIP: string;

@@ -16,6 +16,7 @@ import {
   PATCH_Peer,
   GET_ServerInfo
 } from "@/api/methods";
+import CodeBlock from "@/components/codeBlock.vue";
 const store = useStore(key);
 
 // Const Values
@@ -77,19 +78,54 @@ const clientWizard = ref(false);
 const clientWizardType = ref(ManagedClient);
 const clientWizardPlatform = ref("Linux");
 const clientWizardStep = ref(1);
+const clientWizardDownloadCMD = function () {
+  switch (clientWizardPlatform.value) {
+    case "Linux":
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-linux -o wg-controller && sudo chmod +x wg-controller";
+    case "MacOS":
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-macos-arm64 -o wg-controller && sudo chmod +x wg-controller";
+    case "Windows":
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-windows.exe -o wg-controller.exe";
+    default:
+      return "error";
+  }
+};
 const clientWizardInstallCMD = function () {
   switch (clientWizardPlatform.value) {
     case "Linux":
-      return "sudo apt-get install wg-controller-client";
+      return (
+        "sudo ./wg-controller --server-host " +
+        serverInfo.value?.publicHost +
+        " --api-key <apikeygoeshere> --install"
+      );
     case "MacOS":
-      return "brew install wg-controller-client";
+      return (
+        "sudo ./wg-controller --server-host " +
+        serverInfo.value?.publicHost +
+        " --api-key <apikeygoeshere> --install"
+      );
     case "Windows":
-      return "choco install wg-controller-client";
+      return (
+        "./wg-controller --server-host " +
+        serverInfo.value?.publicHost +
+        " --api-key <apikeygoeshere> --install"
+      );
     default:
-      return "sudo apt-get install wg-controller-client";
+      return "error";
   }
 };
-const clientStartCMD = "sudo systemctl start wg-controller-client";
+const clientStartCMD = function () {
+  switch (clientWizardPlatform.value) {
+    case "Linux":
+      return "sudo systemctl start wg-controller";
+    case "MacOS":
+      return "sudo launchctl start wg-controller";
+    case "Windows":
+      return "Start-Service -Name wg-controller";
+    default:
+      return "error";
+  }
+};
 
 function CopyToClipboard(text: string) {
   navigator.clipboard.writeText(text).then(
@@ -455,7 +491,7 @@ async function NewClientWizardDialog() {
       </template>
     </v-data-table>
 
-    <v-dialog v-model="clientWizard" width="700">
+    <v-dialog v-model="clientWizard" width="750">
       <v-stepper v-model="clientWizardStep" :items="['Client Type', 'Options', 'Deploy']">
         <template #item.1>
           <v-card title="Select Client Type" flat>
@@ -573,25 +609,22 @@ async function NewClientWizardDialog() {
 
         <template #item.3>
           <v-card v-if="clientWizardType === ManagedClient" title="Steps To Deploy" flat>
+            <h4 class="mx-7 mb-1 mt-2">Download Client</h4>
+            <CodeBlock
+              class="mx-7"
+              :body="clientWizardDownloadCMD()"
+              :copyCallback="CopyToClipboard"
+            />
+
             <h4 class="mx-7 mb-1 mt-2">Install Client</h4>
-            <v-code class="mx-7">
-              {{ clientWizardInstallCMD() }}
-              <v-icon
-                color="grey"
-                size="x-small"
-                @click="CopyToClipboard(clientWizardInstallCMD())"
-              >
-                mdi-content-copy
-              </v-icon>
-            </v-code>
+            <CodeBlock
+              class="mx-7"
+              :body="clientWizardInstallCMD()"
+              :copyCallback="CopyToClipboard"
+            />
 
             <h4 class="mx-7 mb-1 mt-3">Start Client</h4>
-            <v-code class="mx-7">
-              {{ clientStartCMD }}
-              <v-icon color="grey" size="x-small" @click="CopyToClipboard(clientStartCMD)">
-                mdi-content-copy
-              </v-icon>
-            </v-code>
+            <CodeBlock class="mx-7" :body="clientStartCMD()" :copyCallback="CopyToClipboard" />
 
             <div class="ml-13 mr-9 mt-6">
               <v-icon color="grey" size="x-small" style="margin-bottom: 2px" class="ml-n5">

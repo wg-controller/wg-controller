@@ -738,6 +738,7 @@ func GET_ServerInfo(c *gin.Context) {
 	serverInfo := types.ServerInfo{
 		PublicKey:        pubKey,
 		PublicEndpoint:   ENV.PUBLIC_HOST + ":" + ENV.WG_PORT,
+		PublicHost:       ENV.PUBLIC_HOST,
 		NameServers:      []string{strings.Split(ENV.SERVER_ADDRESS, "/")[0]},
 		Netmask:          mask,
 		ServerInternalIP: ENV.SERVER_ADDRESS,
