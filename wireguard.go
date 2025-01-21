@@ -85,11 +85,6 @@ func SyncWireguardConfiguration() error {
 	// Convert peers to wireguard-go peer configurations
 	var wgPeers []wgtypes.PeerConfig
 	for _, peer := range peers {
-		// Skip peers that are not enabled
-		if !peer.Enabled {
-			continue
-		}
-
 		// Convert KeepAliveSeconds to time.Duration
 		keepAliveDuration := time.Duration(peer.KeepAliveSeconds) * time.Second
 
@@ -129,6 +124,7 @@ func SyncWireguardConfiguration() error {
 			PersistentKeepaliveInterval: &keepAliveDuration,
 			AllowedIPs:                  allowedIPs,
 			ReplaceAllowedIPs:           true,
+			Remove:                      !peer.Enabled, // Remove peer if not enabled
 		}
 		wgPeers = append(wgPeers, wgPeer)
 	}

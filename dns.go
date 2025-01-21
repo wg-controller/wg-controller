@@ -63,10 +63,12 @@ func SyncPeersDNS(restart bool) error {
 
 	// Write the peers to the dnsmasq hosts file
 	for _, peer := range peers {
-		err = AppendHostname(peer.Hostname, peer.RemoteTunAddress)
-		if err != nil {
-			log.Println(err)
-			continue
+		if peer.Enabled {
+			err = AppendHostname(peer.Hostname, peer.RemoteTunAddress)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 		}
 	}
 

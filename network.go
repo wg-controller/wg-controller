@@ -178,10 +178,12 @@ func SyncRoutingTable() error {
 
 	// Add new routes
 	for _, peer := range peers {
-		for _, network := range peer.RemoteSubnets {
-			err = AddRoute(network, peer.RemoteTunAddress)
-			if err != nil {
-				return err
+		if peer.Enabled {
+			for _, network := range peer.RemoteSubnets {
+				err = AddRoute(network, peer.RemoteTunAddress)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
