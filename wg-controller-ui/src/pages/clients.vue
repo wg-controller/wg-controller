@@ -81,11 +81,11 @@ const clientWizardStep = ref(1);
 const clientWizardDownloadCMD = function () {
   switch (clientWizardPlatform.value) {
     case "Linux":
-      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-linux -o wg-controller && sudo chmod +x wg-controller";
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-linux -O wg-controller && sudo chmod +x wg-controller";
     case "MacOS":
-      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-macos-arm64 -o wg-controller && sudo chmod +x wg-controller";
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-macos-arm64 -O wg-controller && sudo chmod +x wg-controller";
     case "Windows":
-      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-windows.exe -o wg-controller.exe";
+      return "wget https://github.com/wg-controller/wg-controller-client/releases/download/latest/wg-controller-windows.exe -O wg-controller.exe";
     default:
       return "error";
   }
