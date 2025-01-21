@@ -71,7 +71,7 @@ async function onSubmit() {
 <template>
   <v-container fluid class="d-flex align-center justify-center" style="height: 100vh">
     <v-card style="min-width: 500px" class="pa-1">
-      <v-icon alt="logo" color="primary" class="mx-auto mt-3 d-block" :size="70">mdi-vpn</v-icon>
+      <img src="../assets/Logo2.png" alt="logo" class="mx-auto mt-3 d-block" style="width: 90px" />
       <v-card-title class="text-center">Welcome, please login.</v-card-title>
       <v-card-text>
         <v-form ref="loginForm" @submit.prevent="onSubmit" validate-on="blur">

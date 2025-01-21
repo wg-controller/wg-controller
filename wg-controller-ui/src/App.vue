@@ -54,7 +54,7 @@ function Logout() {
       color="secondary"
     >
       <template #[`prepend`]>
-        <v-icon class="ml-3 mr-4" size="x-large" color="primary"> mdi-vpn </v-icon>
+        <img class="ml-3 mr-4" style="width: 40px" src="./assets/Logo.png" />
         <v-tabs slider-color="primary">
           <v-tab to="/clients"> Clients </v-tab>
           <v-tab to="/apikeys"> API Keys </v-tab>
@@ -88,7 +88,7 @@ function Logout() {
         <v-form
           ref="entryForm"
           @submit.prevent="
-            store.state.ConfirmDialogCallback(), (store.state.ConfirmDialogShow = false)
+            (store.state.ConfirmDialogCallback(), (store.state.ConfirmDialogShow = false))
           "
         >
           <v-card-title class="text-h6 mb-1 ml-2 mt-4">
