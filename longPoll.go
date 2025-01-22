@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/wg-controller/wg-controller/db"
 	"github.com/wg-controller/wg-controller/types"
 )
 
@@ -15,6 +16,7 @@ type LP_Message struct {
 	Data       string            `json:"data"`
 	Attributes map[string]string `json:"attributes"`
 	Config     types.Peer        `json:"config,omitempty"`
+	Peers      []types.Peer      `json:"peers,omitempty"`
 }
 
 type LP_Client struct {
@@ -105,4 +107,26 @@ func PushPeerConfig(Peer types.Peer) {
 		Config: Peer,
 	}
 	SendClientMessage(Peer.UUID, msg)
+}
+
+func FanoutPeers() {
+	// Get peers from DB
+	peers, err := db.GetPeers()
+	if err != nil {
+		log.Println("Failed to get peers:", err)
+		return
+	}
+
+	// Create new message
+	msg := LP_Message{
+		Topic: "peers",
+		Peers: peers,
+	}
+
+	// Send to all clients
+	LP_Clients.Range(func(key, value interface{}) bool {
+		client := value.(*LP_Client)
+		client.Ch <- msg
+		return true
+	})
 }

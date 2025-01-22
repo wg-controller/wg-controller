@@ -186,6 +186,7 @@ func PUT_Peer(c *gin.Context) {
 
 	// Push config to peer
 	PushPeerConfig(peer)
+	FanoutPeers()
 
 	c.JSON(200, gin.H{
 		"status": "ok",
@@ -241,6 +242,7 @@ func PATCH_Peer(c *gin.Context) {
 
 	// Push config to peer
 	PushPeerConfig(peer)
+	FanoutPeers()
 
 	c.JSON(200, gin.H{
 		"status": "ok",
@@ -296,6 +298,8 @@ func DELETE_Peer(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	FanoutPeers()
 
 	c.JSON(200, gin.H{
 		"status": "ok",
