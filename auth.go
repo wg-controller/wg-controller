@@ -139,12 +139,12 @@ func AuthMiddleware(c *gin.Context) {
 		expires, attributes, err := db.GetApiKey(hash)
 		if err != nil {
 			c.AbortWithStatus(403)
-			log.Println("Invalid token from IP:", c.ClientIP())
+			log.Println("Invalid token from IP:", c.ClientIP(), err)
 			return
 		}
 
 		// Check if the api key is expired
-		if expires < time.Now().UnixMilli() {
+		if expires < time.Now().UnixMilli() && expires != 0 {
 			c.AbortWithStatus(403)
 			return
 		}
