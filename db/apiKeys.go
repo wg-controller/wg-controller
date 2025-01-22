@@ -80,8 +80,19 @@ func InsertApiKey(key types.APIKey, hash []byte) error {
 	query := `INSERT INTO api_keys
 		(uuid, name, expires_unixmillis, attributes, hash)
 		VALUES (?, ?, ?, ?, ?)`
-	_, err := DB.Exec(query, key.UUID, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), hash)
-	return err
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, key.UUID, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), hash)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func UpdateApiKey(key types.APIKey) error {
@@ -89,13 +100,35 @@ func UpdateApiKey(key types.APIKey) error {
 	query := `UPDATE api_keys
 		SET name = ?, expires_unixmillis = ?, attributes = ?
 		WHERE uuid = ?`
-	_, err := DB.Exec(query, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), key.UUID)
-	return err
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, key.Name, key.ExpiresUnixMillis, strings.Join(key.Attributes, ","), key.UUID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func DeleteApiKey(uuid string) error {
 	// Delete the api key from the database
 	query := `DELETE FROM api_keys WHERE uuid = ?`
-	_, err := DB.Exec(query, uuid)
-	return err
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, uuid)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }

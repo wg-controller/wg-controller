@@ -115,6 +115,7 @@ func GetPeer(uuid string) (types.Peer, error) {
 		attributes
 		FROM peers
 		WHERE uuid = @p1`
+
 	row := DB.QueryRow(query, uuid)
 
 	// Scan the row
@@ -192,6 +193,11 @@ func InsertPeer(peer types.Peer) (err error) {
 		return errors.New("encryption error")
 	}
 
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
 	// Insert the peer into the database
 	query := `INSERT INTO peers (
 		uuid,
@@ -209,7 +215,7 @@ func InsertPeer(peer types.Peer) (err error) {
 		last_ip_address,
 		attributes) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14)`
 
-	_, err = DB.Exec(query,
+	_, err = tx.Exec(query,
 		peer.UUID,
 		peer.Hostname,
 		peer.Enabled,
@@ -224,7 +230,12 @@ func InsertPeer(peer types.Peer) (err error) {
 		peer.LastSeenUnixMillis,
 		peer.LastIPAddress,
 		strings.Join(peer.Attributes, ","))
-	return err
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func UpdatePeer(peer types.Peer) (err error) {
@@ -240,6 +251,11 @@ func UpdatePeer(peer types.Peer) (err error) {
 	if err != nil {
 		log.Println(err)
 		return errors.New("encryption error")
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
 	}
 
 	// Update the peer in the database
@@ -259,7 +275,7 @@ func UpdatePeer(peer types.Peer) (err error) {
 		attributes=@p13
 		WHERE uuid=@p14`
 
-	_, err = DB.Exec(query,
+	_, err = tx.Exec(query,
 		peer.Hostname,
 		peer.Enabled,
 		peer.PrivateKey,
@@ -274,11 +290,26 @@ func UpdatePeer(peer types.Peer) (err error) {
 		peer.LastIPAddress,
 		strings.Join(peer.Attributes, ","),
 		peer.UUID)
-	return err
+
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func DeletePeer(uuid string) error {
-	// Delete the peer from the database
-	_, err := DB.Exec("DELETE FROM peers WHERE uuid = @p1", uuid)
-	return err
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM peers WHERE uuid = ?", uuid)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }

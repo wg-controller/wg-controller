@@ -28,42 +28,74 @@ func CreateSession(hash []byte, userEmail string, expiresUnixMillis int64) error
 	query := `INSERT INTO sessions
 		(hash, user_email, expires_unixmillis)
 		VALUES (?, ?, ?)`
-	_, err := DB.Exec(query, hash, userEmail, expiresUnixMillis)
+
+	tx, err := DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = tx.Exec(query, hash, userEmail, expiresUnixMillis)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func DeleteUserSessions(userEmail string) error {
 	// Delete the user's sessions from the database
 	query := `DELETE FROM sessions WHERE user_email = ?`
-	_, err := DB.Exec(query, userEmail)
+
+	tx, err := DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = tx.Exec(query, userEmail)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func DeleteSession(hash []byte) error {
 	// Delete the session from the database
 	query := `DELETE FROM sessions WHERE hash = ?`
-	_, err := DB.Exec(query, hash)
+
+	tx, err := DB.Begin()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = tx.Exec(query, hash)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func GarbageCollectSessions() {
 	// Query the database
 	query := `DELETE FROM sessions WHERE expires_unixmillis < ?`
-	_, err := DB.Exec(query, time.Now().UnixMilli())
+
+	tx, err := DB.Begin()
 	if err != nil {
 		log.Println(err)
+		return
+	}
+
+	_, err = tx.Exec(query, time.Now().UnixMilli())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
 

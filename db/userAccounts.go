@@ -72,7 +72,12 @@ func InsertAccount(email string, role string, passwordHash []byte, passwordSalt 
 		last_active_unixmillis
 	) VALUES (?, ?, ?, ?, ?, ?)`
 
-	_, err := DB.Exec(query,
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query,
 		email,
 		role,
 		0,
@@ -80,7 +85,12 @@ func InsertAccount(email string, role string, passwordHash []byte, passwordSalt 
 		passwordSalt,
 		0,
 	)
-	return err
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func UpdateAccount(account types.UserAccount) error {
@@ -90,27 +100,59 @@ func UpdateAccount(account types.UserAccount) error {
 		last_active_unixmillis = ?
 		WHERE email = ?`
 
-	_, err := DB.Exec(query,
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query,
 		account.Role,
 		account.FailedAttempts,
 		account.LastActiveUnixMillis,
 		account.Email,
 	)
-	return err
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // Delete an account from the database
 func DeleteAccount(email string) error {
 	query := `DELETE FROM user_accounts WHERE email = ?`
-	_, err := DB.Exec(query, email)
-	return err
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // Delete all admin accounts from the database
 func DeleteAdminAccounts() error {
 	query := `DELETE FROM user_accounts WHERE role = 'admin'`
-	_, err := DB.Exec(query)
-	return err
+
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func GetAccountPasswordHash(email string) (hash []byte, salt []byte, err error) {
@@ -132,8 +174,18 @@ func UpdateAccountPasswordHash(email string, hash []byte, salt []byte) error {
 		password_salt = ?
 		WHERE email = ?`
 
-	_, err := DB.Exec(query, hash, salt, email)
-	return err
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, hash, salt, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func IncrementAccountFailedAttempts(email string) error {
@@ -141,8 +193,18 @@ func IncrementAccountFailedAttempts(email string) error {
 		failed_attempts = failed_attempts + 1
 		WHERE email = ?`
 
-	_, err := DB.Exec(query, email)
-	return err
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func UpdateAccountLastActive(email string, unixMillis int64) error {
@@ -150,6 +212,16 @@ func UpdateAccountLastActive(email string, unixMillis int64) error {
 		last_active_unixmillis = ?
 		WHERE email = ?`
 
-	_, err := DB.Exec(query, unixMillis, email)
-	return err
+	tx, err := DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(query, unixMillis, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
