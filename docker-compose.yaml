@@ -23,13 +23,24 @@ services:
       net.ipv4.conf.all.src_valid_mark: 1
       net.ipv4.ip_forward: 1
     restart: unless-stopped
+    networks:
+      custom_network:
   wg-controller-ui:
     image: ghcr.io/wg-controller/wg-controller-ui:latest
     container_name: wg-controller-ui
     ports:
       - "8080:8080"
     restart: unless-stopped
+    networks:
+      custom_network:
 
 volumes:
   wg-controller-data:
     driver: local
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
