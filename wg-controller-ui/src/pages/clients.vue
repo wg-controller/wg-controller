@@ -425,6 +425,7 @@ async function NewClientWizardDialog() {
       <v-spacer />
     </v-row>
     <v-data-table
+      id="clientsTable"
       :items="items"
       :headers="headers"
       no-data-text="No clients found"
@@ -434,6 +435,22 @@ async function NewClientWizardDialog() {
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >
+      <template #[`item.hostname`]="{ item }">
+        <v-tooltip
+          v-if="!item.attributes.includes('wg-controller-client')"
+          text="3rd Party Client"
+          transition="none"
+          close-delay="0"
+        >
+          <template #activator="{ props }">
+            <v-icon size="x-small" color="grey" class="mr-2 ml-n2" v-bind="props">
+              mdi-information
+            </v-icon>
+            <span>{{ item.hostname }}</span>
+          </template>
+        </v-tooltip>
+        <span v-else class="ml-4">{{ item.hostname }}</span>
+      </template>
       <template #[`item.lastSeenUnixMillis`]="{ item }">
         <div
           class="indicator"
@@ -858,5 +875,9 @@ async function NewClientWizardDialog() {
 
 .green {
   background-color: rgb(69, 197, 69);
+}
+
+#clientsTable > div.v-table__wrapper > table > thead > tr > th:nth-child(1) > div > span {
+  margin-left: 15px;
 }
 </style>
