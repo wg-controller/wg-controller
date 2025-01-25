@@ -19,8 +19,10 @@ export interface Peer {
   lastIPAddress: string;
   transmitBytes: number /* int64 */;
   receiveBytes: number /* int64 */;
+  os: string;
+  clientVersion: string;
+  clientType: string;
   attributes: string[];
-  attributesMap: { [key: string]: string};
 }
 export interface PeerInit {
   uuid: string;

@@ -48,11 +48,19 @@ func InitDB(EncryptionKey []byte) {
 		allowed_subnets TEXT,
 		last_seen_unixmillis INTEGER,
 		last_ip_address TEXT,
+		os TEXT,
+		client_version TEXT,
+		client_type TEXT,
 		attributes TEXT
 	)`)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Migration: Add the "os", "client_version", and "client_type" columns
+	db.Exec(`ALTER TABLE peers ADD COLUMN os TEXT`)
+	db.Exec(`ALTER TABLE peers ADD COLUMN client_version TEXT`)
+	db.Exec(`ALTER TABLE peers ADD COLUMN client_type TEXT`)
 
 	// Create the user_accounts table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS user_accounts (

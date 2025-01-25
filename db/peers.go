@@ -24,6 +24,9 @@ func GetPeers() ([]types.Peer, error) {
 		allowed_subnets,
 		last_seen_unixmillis,
 		last_ip_address,
+		os,
+		client_version,
+		client_type,
 		attributes
 		FROM peers`
 	rows, err := DB.Query(query)
@@ -52,6 +55,9 @@ func GetPeers() ([]types.Peer, error) {
 			&allowedSubnets,
 			&peer.LastSeenUnixMillis,
 			&peer.LastIPAddress,
+			&peer.OS,
+			&peer.ClientVersion,
+			&peer.ClientType,
 			&attributes,
 		)
 		if err != nil {
@@ -112,6 +118,9 @@ func GetPeer(uuid string) (types.Peer, error) {
 		allowed_subnets,
 		last_seen_unixmillis,
 		last_ip_address,
+		os,
+		client_version,
+		client_type,
 		attributes
 		FROM peers
 		WHERE uuid = @p1`
@@ -137,6 +146,9 @@ func GetPeer(uuid string) (types.Peer, error) {
 		&allowedSubnets,
 		&peer.LastSeenUnixMillis,
 		&peer.LastIPAddress,
+		&peer.OS,
+		&peer.ClientVersion,
+		&peer.ClientType,
 		&attributes,
 	)
 	if err != nil {
@@ -213,7 +225,10 @@ func InsertPeer(peer types.Peer) (err error) {
 		allowed_subnets,
 		last_seen_unixmillis,
 		last_ip_address,
-		attributes) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14)`
+		os,
+		client_version,
+		client_type,
+		attributes) VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16, @p17)`
 
 	_, err = tx.Exec(query,
 		peer.UUID,
@@ -229,6 +244,9 @@ func InsertPeer(peer types.Peer) (err error) {
 		strings.Join(peer.AllowedSubnets, ","),
 		peer.LastSeenUnixMillis,
 		peer.LastIPAddress,
+		peer.OS,
+		peer.ClientVersion,
+		peer.ClientType,
 		strings.Join(peer.Attributes, ","))
 	if err != nil {
 		tx.Rollback()
@@ -272,8 +290,11 @@ func UpdatePeer(peer types.Peer) (err error) {
 		allowed_subnets=@p10,
 		last_seen_unixmillis=@p11,
 		last_ip_address=@p12,
-		attributes=@p13
-		WHERE uuid=@p14`
+		os=@p13,
+		client_version=@p14,
+		client_type=@p15,
+		attributes=@p16
+		WHERE uuid=@p17`
 
 	_, err = tx.Exec(query,
 		peer.Hostname,
@@ -288,6 +309,9 @@ func UpdatePeer(peer types.Peer) (err error) {
 		strings.Join(peer.AllowedSubnets, ","),
 		peer.LastSeenUnixMillis,
 		peer.LastIPAddress,
+		peer.OS,
+		peer.ClientVersion,
+		peer.ClientType,
 		strings.Join(peer.Attributes, ","),
 		peer.UUID)
 
