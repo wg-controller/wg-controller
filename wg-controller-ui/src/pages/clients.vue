@@ -508,11 +508,19 @@ async function NewClientWizardDialog() {
               <v-list-item-title>Edit</v-list-item-title>
             </v-list-item>
 
-            <v-list-item class="d-flex flex-row" @click="ExportWGConfig(item, false)">
+            <v-list-item
+              class="d-flex flex-row"
+              @click="ExportWGConfig(item, false)"
+              :disabled="item.attributes.includes('wg-controller-client')"
+            >
               <v-list-item-title>Export WG Config</v-list-item-title>
             </v-list-item>
 
-            <v-list-item class="d-flex flex-row" @click="ExportWGConfig(item, true)">
+            <v-list-item
+              class="d-flex flex-row"
+              @click="ExportWGConfig(item, true)"
+              :disabled="item.attributes.includes('wg-controller-client')"
+            >
               <v-list-item-title>Export WG QR-Code</v-list-item-title>
             </v-list-item>
 
