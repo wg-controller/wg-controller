@@ -438,18 +438,30 @@ async function NewClientWizardDialog() {
       <template #[`item.hostname`]="{ item }">
         <v-tooltip
           v-if="!item.attributes.includes('wg-controller-client')"
-          text="3rd Party Client"
+          text="Standard Client"
           transition="none"
           close-delay="0"
         >
           <template #activator="{ props }">
-            <v-icon size="x-small" color="grey" class="mr-2 ml-n2" v-bind="props">
-              mdi-information
-            </v-icon>
+            <img
+              v-bind="props"
+              src="../assets/wireguard.svg"
+              style="width: 15px; margin-bottom: -3px; margin-right: 8px; margin-left: -9px"
+            />
             <span>{{ item.hostname }}</span>
           </template>
         </v-tooltip>
-        <span v-else class="ml-4">{{ item.hostname }}</span>
+        <v-tooltip v-else text="Managed Client" transition="none" close-delay="0">
+          <template #activator="{ props }">
+            <img
+              v-bind="props"
+              src="../assets/Logo.svg"
+              style="width: 13px; margin-bottom: -2px; margin-right: 8px"
+              class="mt-0 ml-n2"
+            />
+            <span>{{ item.hostname }}</span>
+          </template>
+        </v-tooltip>
       </template>
       <template #[`item.lastSeenUnixMillis`]="{ item }">
         <div
@@ -519,8 +531,8 @@ async function NewClientWizardDialog() {
             <v-radio-group v-model="clientWizardType" row class="ml-5">
               <v-radio key="Managed Client" label="Managed Client" :value="ManagedClient" />
               <v-radio
-                key="Wireguard Client"
-                label="Standard Wireguard Client"
+                key="WireGuard Client"
+                label="Standard WireGuard Client"
                 :value="StandardWireguardClient"
               />
             </v-radio-group>
@@ -537,7 +549,7 @@ async function NewClientWizardDialog() {
                 mdi-information
               </v-icon>
               <span class="text-grey-darken-2">
-                A standard wireguard client or 3rd party device. Requires manual configuration.
+                A standard WireGuard client or 3rd party device. Requires manual configuration.
               </span>
             </div>
           </v-card>
@@ -659,7 +671,7 @@ async function NewClientWizardDialog() {
             </div>
           </v-card>
 
-          <v-card v-else title="Wireguard Config" flat>
+          <v-card v-else title="WireGuard Config" flat>
             <v-card-text style="background-color: white; border-radius: 5px" class="px-5 mx-7">
               <v-icon
                 style="position: absolute; right: 40px; top: 65px"
@@ -778,7 +790,7 @@ async function NewClientWizardDialog() {
               mdi-information
             </v-icon>
             <span class="text-grey-darken-2">
-              Standard wireguard clients require a config export before some changes will take
+              Standard WireGuard clients require a config export before some changes will take
               effect.
             </span>
           </div>
