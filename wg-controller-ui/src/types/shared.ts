@@ -20,6 +20,7 @@ export interface Peer {
   transmitBytes: number /* int64 */;
   receiveBytes: number /* int64 */;
   attributes: string[];
+  attributesMap: { [key: string]: string};
 }
 export interface PeerInit {
   uuid: string;
@@ -70,6 +71,7 @@ export interface ServerInfo {
   nameServers: string[];
   netmask: string;
   serverInternalIP: string;
+  serverInternalName: string;
 }
 export interface Password {
   password: string;

@@ -1,22 +1,23 @@
 package types
 
 type Peer struct {
-	UUID               string   `json:"uuid"`
-	Hostname           string   `json:"hostname"`
-	Enabled            bool     `json:"enabled"`
-	PrivateKey         string   `json:"privateKey"`       // Wireguard private key (stored encrypted with AES256)
-	PublicKey          string   `json:"publicKey"`        // Wireguard public key
-	PreSharedKey       string   `json:"preSharedKey"`     // Wireguard pre-shared key (stored encrypted with AES256)
-	KeepAliveSeconds   int      `json:"keepAliveSeconds"` // Wireguard keep-alive interval in seconds
-	LocalTunAddress    string   `json:"localTunAddress"`  // The IP address of the server's tunnel interface (future use)
-	RemoteTunAddress   string   `json:"remoteTunAddress"` // The IP address of the peer's tunnel interface
-	RemoteSubnets      []string `json:"remoteSubnets"`    // A list of CIDR subnets that the peer can provide access to
-	AllowedSubnets     []string `json:"allowedSubnets"`   // A list of CIDR subnets that the peer is allowed to access
-	LastSeenUnixMillis int64    `json:"lastSeenUnixMillis"`
-	LastIPAddress      string   `json:"lastIPAddress"`
-	TransmitBytes      int64    `json:"transmitBytes"`
-	ReceiveBytes       int64    `json:"receiveBytes"`
-	Attributes         []string `json:"attributes"`
+	UUID               string            `json:"uuid"`
+	Hostname           string            `json:"hostname"`
+	Enabled            bool              `json:"enabled"`
+	PrivateKey         string            `json:"privateKey"`       // Wireguard private key (stored encrypted with AES256)
+	PublicKey          string            `json:"publicKey"`        // Wireguard public key
+	PreSharedKey       string            `json:"preSharedKey"`     // Wireguard pre-shared key (stored encrypted with AES256)
+	KeepAliveSeconds   int               `json:"keepAliveSeconds"` // Wireguard keep-alive interval in seconds
+	LocalTunAddress    string            `json:"localTunAddress"`  // The IP address of the server's tunnel interface (future use)
+	RemoteTunAddress   string            `json:"remoteTunAddress"` // The IP address of the peer's tunnel interface
+	RemoteSubnets      []string          `json:"remoteSubnets"`    // A list of CIDR subnets that the peer can provide access to
+	AllowedSubnets     []string          `json:"allowedSubnets"`   // A list of CIDR subnets that the peer is allowed to access
+	LastSeenUnixMillis int64             `json:"lastSeenUnixMillis"`
+	LastIPAddress      string            `json:"lastIPAddress"`
+	TransmitBytes      int64             `json:"transmitBytes"`
+	ReceiveBytes       int64             `json:"receiveBytes"`
+	Attributes         []string          `json:"attributes"`
+	AttributesMap      map[string]string `json:"attributesMap"`
 }
 
 type PeerInit struct {
