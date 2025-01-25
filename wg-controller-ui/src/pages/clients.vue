@@ -62,6 +62,7 @@ async function Init(showLoading: boolean) {
 const items = ref<Peer[]>([]);
 const headers = ref([
   { title: "Hostname", key: "hostname" },
+  { title: "OS", key: "os" },
   { title: "Last Seen", key: "lastSeenUnixMillis" },
   { title: "TX Bytes", key: "transmitBytes" },
   { title: "RX Bytes", key: "receiveBytes" },
@@ -350,6 +351,28 @@ function RemoveClient(client: Peer) {
   store.state.ConfirmDialogShow = true;
 }
 
+function osLogoLookup(os: string) {
+  switch (os) {
+    case "debian":
+      return "debian.svg";
+    case "ubuntu":
+      return "ubuntu.svg";
+    case "arch":
+      return "arch.svg";
+    case "windows":
+      return "windows.svg";
+    case "darwin":
+    case "ios":
+      return "apple.svg";
+    default:
+      return "";
+  }
+}
+
+function CapitalizeFirstLetter(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 async function NewClientWizardDialog() {
   // Get initial value for a potential new client
   let InitPeer: PeerInit;
@@ -383,6 +406,9 @@ async function NewClientWizardDialog() {
     lastIPAddress: "",
     transmitBytes: 0,
     receiveBytes: 0,
+    os: "",
+    clientType: "",
+    clientVersion: "",
     attributes: []
   };
   clientWizardStep.value = 1;
@@ -435,34 +461,24 @@ async function NewClientWizardDialog() {
       density="compact"
       style="border-radius: 5px; height: calc(100vh - 185px)"
     >
-      <template #[`item.hostname`]="{ item }">
+      <template #[`item.os`]="{ item }">
         <v-tooltip
-          v-if="!item.attributes.includes('wg-controller-client')"
-          text="Standard Client"
+          v-if="item.clientType === 'wg-controller-client'"
+          :text="CapitalizeFirstLetter(item.os)"
           transition="none"
           close-delay="0"
         >
           <template #activator="{ props }">
-            <img
-              v-bind="props"
-              src="../assets/wireguard.svg"
-              style="width: 15px; margin-bottom: -3px; margin-right: 8px; margin-left: -9px"
-            />
-            <span>{{ item.hostname }}</span>
+            <img v-bind="props" :src="osLogoLookup(item.os)" width="18px" />
           </template>
         </v-tooltip>
-        <v-tooltip v-else text="Managed Client" transition="none" close-delay="0">
+        <v-tooltip v-else text="Standard WireGuard Client" transition="none" close-delay="0">
           <template #activator="{ props }">
-            <img
-              v-bind="props"
-              src="../assets/Logo.svg"
-              style="width: 13px; margin-bottom: -2px; margin-right: 8px"
-              class="mt-0 ml-n2"
-            />
-            <span>{{ item.hostname }}</span>
+            <img src="../assets/os/wireguard.svg" width="18px" v-bind="props" />
           </template>
         </v-tooltip>
       </template>
+
       <template #[`item.lastSeenUnixMillis`]="{ item }">
         <div
           class="indicator"
@@ -887,9 +903,5 @@ async function NewClientWizardDialog() {
 
 .green {
   background-color: rgb(69, 197, 69);
-}
-
-#clientsTable > div.v-table__wrapper > table > thead > tr > th:nth-child(1) > div > span {
-  margin-left: 15px;
 }
 </style>
