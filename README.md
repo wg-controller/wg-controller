@@ -9,7 +9,7 @@ A self hosted WireGuard VPN server with control plane and web management.
 - Integrated DNS server resolves devices by their configured name
 - Internal IP routing between clients
 - Share access to client local networks with the rest of your overlay network
-- Automatic synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
+- Synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
 - Easy client enrollment with pre defined API keys
 - Support for standard WireGuard clients and 3rd party devices
 
