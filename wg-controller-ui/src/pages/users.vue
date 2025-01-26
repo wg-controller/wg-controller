@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, reactive } from "vue";
 
 import { useStore } from "vuex";
 import { key } from "../store";
@@ -14,6 +14,18 @@ import { VForm } from "vuetify/components";
 import type { UserAccount, UserAccountWithPass } from "@/types/shared";
 import { emailValidate, passwordValidate, required } from "@/utils/validators";
 const store = useStore(key);
+import { useDisplay } from "vuetify";
+const display = reactive(useDisplay());
+
+const computedHeaders = computed(() => {
+  return headers.value.filter((header) => {
+    if ("hide" in header) {
+      return !display[header.hide];
+    } else {
+      return true;
+    }
+  });
+});
 
 onMounted(() => {
   Init();
@@ -43,7 +55,7 @@ const headers = ref([
   { title: "Email", key: "email" },
   { title: "Role", key: "role" },
   { title: "Last Active", key: "lastActiveUnixMillis" },
-  { title: "Failed Attempts", key: "failedAttempts" },
+  { title: "Failed Attempts", key: "failedAttempts", hide: "smAndDown" },
   { title: "Suspended", key: "suspended" },
   { title: "", key: "actions", align: "end", sortable: false }
 ] as const);
@@ -193,7 +205,7 @@ async function ApplyUserDialog() {
 
     <v-data-table
       :items="items"
-      :headers="headers"
+      :headers="computedHeaders"
       no-data-text="No users found"
       :items-per-page="-1"
       :search="search"

@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import { BytesString, timeSinceSeconds, timeSinceString } from "@/utils/utils";
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, reactive } from "vue";
 import { VForm } from "vuetify/components";
 import { useStore } from "vuex";
 import { key } from "../store";
 import { required, hostValidate, subnetsValidate, ipValidate } from "@/utils/validators";
 import VueQrcode from "vue-qrcode";
+import { useDisplay } from "vuetify";
+
+const display = reactive(useDisplay());
 
 import type { Peer, PeerInit, ServerInfo } from "@/types/shared";
 import {
@@ -62,15 +65,26 @@ async function Init(showLoading: boolean) {
 const items = ref<Peer[]>([]);
 const headers = ref([
   { title: "Hostname", key: "hostname" },
-  { title: "OS", key: "os" },
   { title: "Last Seen", key: "lastSeenUnixMillis" },
+  { title: "OS", key: "os", hide: "smAndDown" },
+  { title: "Client Ver", key: "clientVersion", hide: "smAndDown" },
   { title: "TX Bytes", key: "transmitBytes" },
   { title: "RX Bytes", key: "receiveBytes" },
   { title: "Address", key: "remoteTunAddress", sortable: false },
-  { title: "Remote Subnets", key: "remoteSubnets", sortable: false },
+  { title: "Remote Subnets", key: "remoteSubnets", hide: "mdAndDown", sortable: false },
   { title: "Enabled", key: "enabled" },
   { title: "", key: "actions", align: "end", sortable: false }
 ] as const);
+
+const computedHeaders = computed(() => {
+  return headers.value.filter((header) => {
+    if ("hide" in header) {
+      return !display[header.hide];
+    } else {
+      return true;
+    }
+  });
+});
 
 const search = ref("");
 const loading = ref(true);
@@ -453,7 +467,7 @@ async function NewClientWizardDialog() {
     <v-data-table
       id="clientsTable"
       :items="items"
-      :headers="headers"
+      :headers="computedHeaders"
       no-data-text="No clients found"
       :items-per-page="-1"
       :search="search"
@@ -469,12 +483,17 @@ async function NewClientWizardDialog() {
           close-delay="0"
         >
           <template #activator="{ props }">
-            <img v-bind="props" :src="osLogoLookup(item.os)" width="18px" />
+            <img
+              v-bind="props"
+              :src="'/os/' + osLogoLookup(item.os)"
+              width="18px"
+              style="margin-top: 3px; margin-bottom: -3px"
+            />
           </template>
         </v-tooltip>
         <v-tooltip v-else text="Standard WireGuard Client" transition="none" close-delay="0">
           <template #activator="{ props }">
-            <img src="../assets/os/wireguard.svg" width="18px" v-bind="props" />
+            <img src="/os/wireguard.svg" width="18px" v-bind="props" />
           </template>
         </v-tooltip>
       </template>

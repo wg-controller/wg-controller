@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="87.041" height="108.445" viewBox="0 0 87.041 108.445" overflow="visible" enable-background="new 0 0 87.041 108.445">
-  <g id="Layer_1">
+<svg xmlns="http://www.w3.org/2000/svg" width="87.041" height="108.445" viewBox="0 0 108 108" overflow="visible" enable-background="new 0 0 87.041 108.445">
+  <g id="Layer_1" transform="matrix(0.999712, 0, 0, 1, 9.48897, -0.507013)">
     <g>
       <path d="M51.986,57.297c-1.797,0.025,0.34,0.926,2.686,1.287 c0.648-0.506,1.236-1.018,1.76-1.516C54.971,57.426,53.484,57.434,51.986,57.297" style=""/>
       <path d="M61.631,54.893c1.07-1.477,1.85-3.094,2.125-4.766c-0.24,1.192-0.887,2.221-1.496,3.307 c-3.359,2.115-0.316-1.256-0.002-2.537C58.646,55.443,61.762,53.623,61.631,54.893" style=""/>

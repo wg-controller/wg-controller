@@ -30,6 +30,11 @@ const router = createRouter({
       name: "API Keys",
       path: "/apikeys",
       component: () => import("@/pages/apiKeys.vue")
+    },
+    {
+      name: "Settings",
+      path: "/settings",
+      component: () => import("@/pages/settings.vue")
     }
   ]
 });

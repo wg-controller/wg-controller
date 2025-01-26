@@ -121,7 +121,7 @@ function Logout() {
 <style>
 .html,
 body {
-  min-width: 750px !important;
+  min-width: 775px !important;
 }
 
 .v-table__wrapper > table > tbody > tr:nth-of-type(odd) {
