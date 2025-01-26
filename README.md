@@ -22,7 +22,7 @@ A WireGuard VPN server and control plane with central web management.
 
 ### Docker
 
-- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill environment variables
+- Generate WG_PRIVATE_KEY and DB_AES_KEY
 
   ```
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-wg-key
@@ -32,7 +32,7 @@ A WireGuard VPN server and control plane with central web management.
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-db-key
   ```
 
-- Run docker image (fill in ADMIN_PASS, WG_PRIVATE_KEY, DB_AES_KEY)
+- Run docker image (fill in env vars)
 
   ```
   docker run --name wg-controller \
@@ -58,7 +58,7 @@ A WireGuard VPN server and control plane with central web management.
 ### Kubernetes
 
 - Clone repo or download kube-manifests.yaml
-- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill env fields in kube-manifests.yaml
+- Generate WG_PRIVATE_KEY and DB_AES_KEY
 
   ```
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-wg-key
@@ -68,7 +68,7 @@ A WireGuard VPN server and control plane with central web management.
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-db-key
   ```
 
-- Fill in remaining env fields in kube-manifests.yaml
+- Fill in env fields in kube-manifests.yaml
 - Configure ingress domain, SSL etc
 - Deploy to kubernetes with kubectl
 
