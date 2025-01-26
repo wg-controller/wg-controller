@@ -60,7 +60,7 @@ func StartAPI() {
 	router.Use(static.Serve("/", static.LocalFile("/var/www", true)))
 
 	// Start Listening
-	log.Println("Starting API on port " + ENV.API_PORT)
+	log.Println("Starting web server at: http://0.0.0.0:" + ENV.API_PORT)
 	err := router.Run(":" + ENV.API_PORT)
 	if err != nil {
 		log.Fatal("Error starting API:", err)
