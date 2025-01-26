@@ -1,15 +1,15 @@
 # WireGuard Controller
 
-A WireGuard VPN server and control plane with central web management.
+A self hosted WireGuard VPN server with control plane and web management.
 
 ## Features
 
-- Easily host your own WireGuard server with Docker or Kubernetes
+- Easily host your own VPN overlay network with Docker or Kubernetes
 - Manage users and devices from a modern web interface
 - Integrated DNS server resolves devices by their configured name
 - Internal IP routing between clients
-- Share access to remote networks on a client by client basis
-- Synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
+- Share access to client local networks with the rest of your overlay network
+- Control plane handles synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
 - Support for standard WireGuard clients and 3rd party devices
 
 ## Screenshots
