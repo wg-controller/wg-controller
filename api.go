@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/wg-controller/wg-controller/db"
@@ -54,6 +55,9 @@ func StartAPI() {
 	private.GET("/serverinfo", GET_ServerInfo)
 
 	private.GET("/poll", GET_LongPoll)
+
+	// Static server
+	router.Use(static.Serve("/", static.LocalFile("/var/www", true)))
 
 	// Start Listening
 	log.Println("Starting API on port " + ENV.API_PORT)

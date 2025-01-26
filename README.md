@@ -22,8 +22,7 @@ A WireGuard VPN server and control plane with central web management.
 
 ### Docker
 
-- Clone repo or download docker-compose.yaml
-- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill environment fields in docker-compose.yaml
+- Generate WG_PRIVATE_KEY and DB_AES_KEY to fill environment variables
 
   ```
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-wg-key
@@ -33,14 +32,28 @@ A WireGuard VPN server and control plane with central web management.
   docker run --rm -it ghcr.io/wg-controller/wg-controller:latest generate-db-key
   ```
 
-- Fill in remaining environment fields in docker-compose.yaml
-- Start server with docker compose
+- Run docker image (fill in ADMIN_PASS, WG_PRIVATE_KEY, DB_AES_KEY)
 
   ```
-  docker compose up
+  docker run --name wg-controller \
+    -e PUBLIC_HOST="wg.example.com" \
+    -e ADMIN_EMAIL="admin@example.com" \
+    -e ADMIN_PASS="" \
+    -e WG_PRIVATE_KEY="" \
+    -e DB_AES_KEY="" \
+    -p 51820:51820/udp \
+    -p 8081:8081 \
+    -v wg-controller-data:/data \
+    --cap-add=NET_ADMIN \
+    --cap-add=SYS_MODULE \
+    --privileged \
+    --user=0 \
+    --sysctl net.ipv4.conf.all.src_valid_mark=1 \
+    --sysctl net.ipv4.ip_forward=1 \
+    ghcr.io/wg-controller/wg-controller:latest
   ```
 
-- The web interface will be running on port :8080
+- The web interface will be running on port :8081
 
 ### Kubernetes
 

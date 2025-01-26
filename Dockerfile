@@ -29,6 +29,16 @@ WORKDIR /app/wireguard-go
 # Build wireguard-go
 RUN go build -o /app/wireguard-go/wireguard-go .
 
+# UI build stage
+FROM node:lts-alpine AS ui-build
+
+WORKDIR /app
+COPY ./wg-controller-ui/package*.json ./
+RUN npm install --production
+COPY ./wg-controller-ui/ ./
+
+RUN npm run build
+
 # Final stage
 FROM alpine:3.14.2
 
@@ -44,6 +54,9 @@ RUN apk add --no-cache dnsmasq
 
 # Packages to help with debugging
 RUN apk add --no-cache -U wireguard-tools
+
+# Copy UI build
+COPY --from=ui-build /app/dist /var/www
 
 # Run
 ENTRYPOINT ["/app/main"]
