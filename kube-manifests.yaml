@@ -94,53 +94,6 @@ spec:
     app: wg-controller
 
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  labels:
-    app: wg-controller-ui
-  name: wg-controller-ui
-  namespace: default
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: wg-controller-ui
-  template:
-    metadata:
-      labels:
-        app: wg-controller-ui
-    spec:
-      containers:
-        - name: wg-controller-ui
-          image: ghcr.io/wg-controller/wg-controller-ui:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-              protocol: TCP
-          resources:
-            limits:
-              memory: "500Mi"
-              cpu: "1"
-      imagePullSecrets:
-        - name: ghcr-secret
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: wg-controller-ui
-  namespace: default
-spec:
-  ports:
-    - name: https
-      protocol: TCP
-      port: 8080
-      targetPort: 8080
-  selector:
-    app: wg-controller-ui
-
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -152,11 +105,6 @@ metadata:
     cert-manager.io/issuer: "example-acme-issuer"
 spec:
   ingressClassName: nginx
-  defaultBackend:
-    service:
-      name: wg-controller-ui
-      port:
-        number: 8080
   tls:
     - hosts:
         - wg.example.co.nz
@@ -165,7 +113,7 @@ spec:
     - host: "wg.example.co.nz"
       http:
         paths:
-          - path: /api/v1
+          - path: /
             pathType: Prefix
             backend:
               service:
