@@ -58,9 +58,9 @@ func InitDB(EncryptionKey []byte) {
 	}
 
 	// Migration: Add the "os", "client_version", and "client_type" columns
-	db.Exec(`ALTER TABLE peers ADD COLUMN os TEXT`)
-	db.Exec(`ALTER TABLE peers ADD COLUMN client_version TEXT`)
-	db.Exec(`ALTER TABLE peers ADD COLUMN client_type TEXT`)
+	db.Exec(`ALTER TABLE peers ADD COLUMN os TEXT DEFAULT ""`)
+	db.Exec(`ALTER TABLE peers ADD COLUMN client_version TEXT DEFAULT ""`)
+	db.Exec(`ALTER TABLE peers ADD COLUMN client_type TEXT DEFAULT ""`)
 
 	// Create the user_accounts table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS user_accounts (
