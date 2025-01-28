@@ -51,6 +51,20 @@ pipeline {
             }
         }
 
+        stage('Initialize Buildx') {
+            steps {
+                script {
+                    // Initialize Docker Buildx
+                    sh """
+                        docker buildx create \
+                            --name container-builder \
+                            --driver docker-container \
+                            --boostrap --use
+                    """
+                }
+            }
+        }
+
         stage('Build and Push Docker Image') {
             steps {
                 script {
@@ -63,6 +77,17 @@ pipeline {
                             -t ${REPO}:${IMAGE_TAG} \
                             -t ${REPO}:latest \
                             . --push
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    // Cleanup Docker Buildx
+                    sh """
+                        docker system prune -f
                     """
                 }
             }
