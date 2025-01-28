@@ -54,16 +54,18 @@ pipeline {
         stage('Initialize Buildx') {
             steps {
                 script {
-                    // Initialize Docker Buildx
                     sh """
-                        docker buildx create \
-                            --name container-builder \
-                            --driver docker-container \
-                            --bootstrap --use
+                        # If the builder doesn't exist, create it; otherwise, just use it
+                        docker buildx inspect container-builder || \
+                            docker buildx create --name container-builder --driver docker-container --bootstrap
+
+                        # Switch context to the container-builder
+                        docker buildx use container-builder
                     """
                 }
             }
         }
+
 
         stage('Build and Push Docker Image') {
             steps {
