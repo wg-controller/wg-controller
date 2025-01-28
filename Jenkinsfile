@@ -45,7 +45,7 @@ pipeline {
                 script {
                     // Docker login to GitHub Container Registry
                     sh """
-                        echo ${GHCR_TOKEN} | docker login ghcr.io -u ${GHCR_USERNAME} --password-stdin
+                        echo ${GHCR_TOKEN_PSW} | docker login ghcr.io -u ${GHCR_USERNAME} --password-stdin
                     """
                 }
             }
@@ -57,7 +57,7 @@ pipeline {
                     sh """
                         docker buildx build \
                             --platform linux/amd64 --platform linux/arm64 \
-                            --build-arg GHCR_TOKEN=${GHCR_TOKEN} \
+                            --build-arg GHCR_TOKEN=${GHCR_TOKEN_PSW} \
                             --build-arg IMAGE_TAG=${IMAGE_TAG} \
                             --build-arg IMAGE_NAME=${IMAGE_NAME} \
                             -t ${REPO}:${IMAGE_TAG} \
