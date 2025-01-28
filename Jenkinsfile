@@ -1,11 +1,12 @@
 pipeline {
     agent any
+
+    options {
+        disableConcurrentBuilds(abortPrevious: true)
+    }
     
     environment {
-        // Jenkins credential ID for GHCR token
         GHCR_TOKEN      = credentials('gh-token-1')
-        
-        // GHCR variables
         GHCR_USERNAME   = "wg-controller"   // GitHub organization or username
         IMAGE_NAME      = "wg-controller"   // Docker image name
         REPO            = "ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}"
@@ -14,17 +15,13 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // If this pipeline is triggered from a Multibranch Pipeline or
-                // a Pipeline project configured to use this repo/branch, 
-                // checkout scm will clone the relevant branch/tag
                 checkout scm
             }
         }
         
-        stage('Determine Tag') {
+        stage('Get Tag') {
             steps {
                 script {
-                    // Capture the most recent git tag
                     def tag = sh(
                         script: "git describe --tags --abbrev=0",
                         returnStdout: true
@@ -43,7 +40,6 @@ pipeline {
         stage('Login to GHCR') {
             steps {
                 script {
-                    // Docker login to GitHub Container Registry
                     sh """
                         echo ${GHCR_TOKEN_PSW} | docker login ghcr.io -u ${GHCR_USERNAME} --password-stdin
                     """
@@ -55,11 +51,8 @@ pipeline {
             steps {
                 script {
                     sh """
-                        # If the builder doesn't exist, create it; otherwise, just use it
                         docker buildx inspect container-builder || \
                             docker buildx create --name container-builder --driver docker-container --bootstrap
-
-                        # Switch context to the container-builder
                         docker buildx use container-builder
                     """
                 }
@@ -87,7 +80,6 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    // Cleanup Docker Buildx
                     sh """
                         docker system prune -f
                     """
