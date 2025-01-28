@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         // Jenkins credential ID for GHCR token
-        GHCR_TOKEN      = credentials('a1063d11-4e4c-40bf-96b1-ce70f84a4542')
+        GHCR_TOKEN      = credentials('gh-token-1')
         
         // GHCR variables
         GHCR_USERNAME   = "wg-controller"   // GitHub organization or username
