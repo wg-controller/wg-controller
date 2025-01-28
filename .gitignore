@@ -29,3 +29,4 @@ go.work
 /data
 docker-run.bash
 test.sh
+publish.bash
