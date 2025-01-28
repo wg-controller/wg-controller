@@ -59,7 +59,7 @@ pipeline {
                         docker buildx create \
                             --name container-builder \
                             --driver docker-container \
-                            --boostrap --use
+                            --bootstrap --use
                     """
                 }
             }
