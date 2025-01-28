@@ -33,10 +33,15 @@ RUN go build -o /app/wireguard-go/wireguard-go .
 FROM node:lts-alpine AS ui-build
 
 WORKDIR /app
+
+# Copy package.json and package-lock.json
 COPY ./wg-controller-ui/package*.json ./
-RUN npm install --production
 COPY ./wg-controller-ui/ ./
 
+# install project dependencies
+RUN npm install
+
+# build app
 RUN npm run build
 
 # Final stage
