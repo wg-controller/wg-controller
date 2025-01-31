@@ -11,12 +11,11 @@ import (
 )
 
 var storedPeers sync.Map // Map of peer UUIDs to online status
+const minimumPingInterval = 15 * time.Second
 
 func InitAlerts() {
 	storedPeers = sync.Map{}
 	for {
-		time.Sleep(15 * time.Second)
-
 		// Get all peers
 		peers, err := db.GetPeers()
 		if err != nil {
@@ -26,6 +25,7 @@ func InitAlerts() {
 
 		// Ping each peer in a goroutine
 		var wg sync.WaitGroup
+		startTime := time.Now()
 		for _, peer := range peers {
 			wg.Add(1)
 			go func(peer types.Peer) {
@@ -58,6 +58,11 @@ func InitAlerts() {
 
 		// Wait for all goroutines to finish
 		wg.Wait()
+
+		// Enforce minimum ping interval
+		if time.Since(startTime) < minimumPingInterval {
+			time.Sleep(minimumPingInterval - time.Since(startTime))
+		}
 	}
 }
 
@@ -67,6 +72,7 @@ func pingPeer(ipAddr string) bool {
 		log.Println(err)
 		return false
 	}
+	pinger.Timeout = 2 * time.Second
 	pinger.Count = 3
 	err = pinger.Run() // Blocks until finished.
 	if err != nil {
