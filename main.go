@@ -30,6 +30,7 @@ type Env struct {
 	API_PORT         string // Port for API to listen on (optional)
 	SERVER_HOSTNAME  string // Internal hostname of the server (optional)
 	UPSTREAM_DNS     string // Upstream DNS server (optional)
+	SLACK_WEBHOOK    string // Slack webhook URL (optional)
 }
 
 var ENV Env
@@ -99,6 +100,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Error syncing routing table:", err)
 	}
+
+	// Init Alerts
+	go InitAlerts()
 
 	// Init long polling
 	InitLongPoll()
@@ -214,6 +218,8 @@ func LoadEnvVars() {
 		log.Println("UPSTREAM_DNS is not set. Defaulting to 8.8.8.8")
 		ENV.UPSTREAM_DNS = "8.8.8.8"
 	}
+
+	ENV.SLACK_WEBHOOK = os.Getenv("SLACK_WEBHOOK")
 }
 
 // Creates the admin account as specified in the environment variables

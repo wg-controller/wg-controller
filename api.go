@@ -192,6 +192,9 @@ func PUT_Peer(c *gin.Context) {
 	PushPeerConfig(peer)
 	FanoutPeers()
 
+	// Trigger alert
+	peerCreatedAlert(peer.Hostname)
+
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})
