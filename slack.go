@@ -56,9 +56,8 @@ func SendSlackMessage(webhookURL string, message SlackMessage) error {
 func NewSlackMessageBody(event string, message string, url string) SlackMessage {
 	msg := SlackMessage{
 		Blocks: []SlackBlock{
-			{Type: "header", Text: &SlackText{Type: "plain_text", Text: "WG Controller Alert"}},
-			{Type: "section", Text: &SlackText{Type: "mrkdwn", Text: "*Event:* " + event}},
-			{Type: "section", Text: &SlackText{Type: "mrkdwn", Text: "*Message:* " + message}},
+			{Type: "header", Text: &SlackText{Type: "plain_text", Text: event}},
+			{Type: "section", Text: &SlackText{Type: "plain_text", Text: message}},
 		},
 	}
 

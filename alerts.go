@@ -2,85 +2,88 @@ package main
 
 import (
 	"log"
+	"sync"
 	"time"
 
+	probing "github.com/prometheus-community/pro-bing"
 	"github.com/wg-controller/wg-controller/db"
 	"github.com/wg-controller/wg-controller/types"
 )
 
-var storedPeers []types.Peer
+var storedPeers sync.Map // Map of peer UUIDs to online status
 
 func InitAlerts() {
-	// Warmup period
-	time.Sleep(45 * time.Second)
-
+	storedPeers = sync.Map{}
 	for {
 		time.Sleep(15 * time.Second)
 
 		// Get all peers
-		peers, err := getAllPeers()
+		peers, err := db.GetPeers()
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		// Check if the peers have changed
+		// Ping each peer in a goroutine
+		var wg sync.WaitGroup
 		for _, peer := range peers {
-			for _, storedPeer := range storedPeers {
-				if peer.UUID == storedPeer.UUID {
-					// Determine peer status by last seen timestamp
-					onlineNow := time.Since(time.UnixMilli(peer.LastSeenUnixMillis)).Seconds() < 180
-					onlineBefore := time.Since(time.UnixMilli(storedPeer.LastSeenUnixMillis)).Seconds() < 180
+			wg.Add(1)
+			go func(peer types.Peer) {
+				defer wg.Done()
 
-					if onlineNow && !onlineBefore {
-						// Peer has come online
-						peerStatusAlert(peer.Hostname, true)
-					}
-					if !onlineNow && onlineBefore {
-						// Peer has gone offline
-						peerStatusAlert(peer.Hostname, false)
-					}
+				// Check if the peer is online
+				online := pingPeer(peer.RemoteTunAddress)
 
-					break
+				// Get peer previous status
+				p, _ := storedPeers.Load(peer.UUID)
+				if p == nil {
+					storedPeers.Store(peer.UUID, false)
+					return
 				}
-			}
+
+				// Check if the peer status has changed
+				if p.(bool) && !online {
+					// Peer has gone offline
+					peerStatusAlert(peer.Hostname, false)
+				}
+				if !p.(bool) && online {
+					// Peer has come online
+					peerStatusAlert(peer.Hostname, true)
+				}
+
+				// Store the new status
+				storedPeers.Store(peer.UUID, online)
+			}(peer)
 		}
 
-		// Update the stored peers
-		storedPeers = peers
+		// Wait for all goroutines to finish
+		wg.Wait()
 	}
 }
 
-func getAllPeers() ([]types.Peer, error) {
-	peers, err := db.GetPeers()
+func pingPeer(ipAddr string) bool {
+	pinger, err := probing.NewPinger(ipAddr)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return false
 	}
-
-	var extendedPeers []types.Peer
-	for _, peer := range peers {
-		if peer.Enabled {
-			extendedPeer, err := GetWireguardPeer(peer)
-			if err != nil {
-				log.Println(err)
-				continue // Skip this peer
-			}
-			extendedPeers = append(extendedPeers, extendedPeer)
-		} else {
-			extendedPeers = append(extendedPeers, peer)
-		}
+	pinger.Count = 3
+	err = pinger.Run() // Blocks until finished.
+	if err != nil {
+		log.Println(err)
+		return false
 	}
+	stats := pinger.Statistics()
 
-	return extendedPeers, nil
+	return stats.PacketsRecv > 0
 }
 
 func peerStatusAlert(peerName string, online bool) {
 	var event string
 	if online {
-		event = "Client Up 🟢"
+		event = "🟢 Client Up"
 	} else {
-		event = "Client Down 🚨"
+		event = "🚨 Client Down"
 	}
 
 	var message string
@@ -101,7 +104,7 @@ func peerStatusAlert(peerName string, online bool) {
 }
 
 func peerCreatedAlert(peerName string) {
-	event := "Client Created 🟢"
+	event := "🟢 Client Created"
 	message := peerName + " has been created"
 
 	// Send the alert to Slack
