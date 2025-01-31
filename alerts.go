@@ -13,7 +13,7 @@ import (
 var storedPeers sync.Map // Map of peer UUIDs to online status
 const minimumPingInterval = 15 * time.Second
 
-func InitAlerts() {
+func InitInternalPing() {
 	storedPeers = sync.Map{}
 	for {
 		// Get all peers
@@ -72,7 +72,7 @@ func pingPeer(ipAddr string) bool {
 		log.Println(err)
 		return false
 	}
-	pinger.Timeout = 2 * time.Second
+	pinger.Timeout = 4 * time.Second
 	pinger.Count = 3
 	err = pinger.Run() // Blocks until finished.
 	if err != nil {

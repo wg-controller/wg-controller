@@ -12,6 +12,8 @@ A self hosted WireGuard VPN server with control plane and web management.
 - Synchronization of WireGuard keys and settings between clients and server (using [wg-controller-client](https://github.com/wg-controller/wg-controller-client))
 - Easy client enrollment with pre defined API keys
 - Support for standard WireGuard clients and 3rd party devices
+- Optional internal client monitoring by icmp ping
+- Optional client up/down Slack alerts via webhook
 
 ## Screenshots
 
