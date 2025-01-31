@@ -11,6 +11,9 @@ import (
 var storedPeers []types.Peer
 
 func InitAlerts() {
+	// Warmup period
+	time.Sleep(45 * time.Second)
+
 	for {
 		time.Sleep(15 * time.Second)
 
@@ -26,8 +29,8 @@ func InitAlerts() {
 			for _, storedPeer := range storedPeers {
 				if peer.UUID == storedPeer.UUID {
 					// Determine peer status by last seen timestamp
-					onlineNow := time.Since(time.UnixMilli(peer.LastSeenUnixMillis)).Seconds() < 60
-					onlineBefore := time.Since(time.UnixMilli(storedPeer.LastSeenUnixMillis)).Seconds() < 60
+					onlineNow := time.Since(time.UnixMilli(peer.LastSeenUnixMillis)).Seconds() < 180
+					onlineBefore := time.Since(time.UnixMilli(storedPeer.LastSeenUnixMillis)).Seconds() < 180
 
 					if onlineNow && !onlineBefore {
 						// Peer has come online
