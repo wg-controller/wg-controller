@@ -65,7 +65,7 @@ pipeline {
                 script {
                     sh """
                         docker buildx build \
-                            --platform linux/amd64 --platform linux/arm64 \
+                            --platform linux/amd64 \
                             --build-arg GHCR_TOKEN=${GHCR_TOKEN_PSW} \
                             --build-arg IMAGE_TAG=${IMAGE_TAG} \
                             --build-arg IMAGE_NAME=${IMAGE_NAME} \
