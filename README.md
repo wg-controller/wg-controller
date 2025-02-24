@@ -96,6 +96,8 @@ A self hosted WireGuard VPN server with control plane and web management.
 | API_PORT         | 8081          | 9000                                         |
 | SERVER_HOSTNAME  | wg-controller | my-vpn-server                                |
 | UPSTREAM_DNS     | 8.8.8.8       | 1.1.1.1                                      |
+| SLACK_WEBHOOK    | none          | https://hooks.slack.com/services/example     |
+| PING_MONITORING  | false         | true                                         |
 
 ## Security
 
